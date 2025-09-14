@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestión - Sistema de Horarios</title>
+    <style>
+        :root {
+            --bg-color: #f4f7f9; --surface-color: #ffffff; --text-color: #34495e;
+            --text-secondary-color: #7f8c8d; --border-color: #ecf0f1; --shadow-color: rgba(0, 0, 0, 0.1);
+            --hover-bg-color: #f0f0f0; --selected-bg-color: #d1ecf1; --primary-color: #3498db;
+            --primary-hover-color: #2980b9; --danger-color: #e74c3c; --danger-hover-color: #c0392b;
+            --success-color: #2ecc71; --success-hover-color: #27ae60; --neutral-color: #bdc3c7;
+            --neutral-hover-color: #95a5a6; --modal-bg: rgba(0, 0, 0, 0.5);
+        }
+        body.dark-mode {
+            --bg-color: #121212; --surface-color: #1e1e1e; --text-color: #e0e0e0;
+            --text-secondary-color: #bdc3c7; --border-color: #333333; --shadow-color: rgba(0, 0, 0, 0.5);
+            --hover-bg-color: #2c2c2c; --selected-bg-color: #003c5a;
+        }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: var(--bg-color); margin: 0; padding: 20px; color: var(--text-color); transition: background-color 0.3s ease, color 0.3s ease; }
+        h1, h3, h4 { color: var(--text-color); }
+        .container { max-width: 1200px; margin: 0 auto; }
+        .header { text-align: center; margin-bottom: 20px; padding: 20px; background-color: var(--surface-color); border-radius: 8px; box-shadow: 0 4px 6px var(--shadow-color); }
+        .header h1 { margin: 0; }
+        .header p { margin: 10px 0 0; color: var(--text-secondary-color); }
+        .header .open-horario-btn { display: inline-block; margin-top: 15px; padding: 10px 20px; background-color: var(--success-color); color: white; text-decoration: none; border-radius: 5px; font-weight: bold; transition: background-color 0.3s ease; }
+        .header .open-horario-btn:hover { background-color: var(--success-hover-color); }
+        .controles-container { display: grid; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); gap: 20px; }
+        .control-panel { background-color: var(--surface-color); padding: 20px; border-radius: 8px; box-shadow: 0 4px 6px var(--shadow-color); position: relative; }
+        .control-panel h3 { margin-top: 0; border-bottom: 1px solid var(--border-color); padding-bottom: 10px; margin-bottom: 15px; }
+        .loading-overlay { position: absolute; top: 0; left: 0; right: 0; bottom: 0; background-color: rgba(255,255,255,0.7); display: flex; justify-content: center; align-items: center; border-radius: 8px; z-index: 10; }
+        body.dark-mode .loading-overlay { background-color: rgba(0,0,0,0.7); }
+        .form-group { margin-bottom: 15px; display: flex; flex-direction: column; gap: 8px; }
+        .control-panel input[type="text"], .control-panel select, .control-panel button, .control-panel .button-label { width: 100%; padding: 10px; border-radius: 5px; border: 1px solid var(--neutral-color); box-sizing: border-box; background-color: var(--bg-color); color: var(--text-color); font-size: 1em; }
+        .control-panel button, .control-panel .button-label { background-color: var(--primary-color); color: white; font-weight: bold; border: none; cursor: pointer; transition: background-color 0.3s ease; text-align: center; }
+        .control-panel button.danger { background-color: var(--danger-color); }
+        .control-panel button.danger:hover { background-color: var(--danger-hover-color); }
+        .control-panel button:hover, .control-panel .button-label:hover { background-color: var(--primary-hover-color); }
+        .juegos-selector { position: relative; cursor: pointer; }
+        .juegos-selector-display { padding: 10px; border: 1px solid var(--neutral-color); border-radius: 5px; background-color: var(--bg-color); }
+        .dropdown-juegos { display: none; position: absolute; top: 100%; left: 0; width: 100%; background-color: var(--surface-color); border: 1px solid var(--neutral-color); border-top: none; box-shadow: 0 4px 6px var(--shadow-color); z-index: 10; max-height: 200px; overflow-y: auto; }
+        .juegos-selector.active .dropdown-juegos { display: block; }
+        .dropdown-juegos label { display: flex; align-items: center; padding: 8px 10px; cursor: pointer; }
+        .dropdown-juegos input[type="checkbox"] { margin-right: 10px; }
+        .preview-table-container { border: 1px solid var(--border-color); border-radius: 5px; max-height: 250px; overflow-y: auto; }
+        .preview-table { width: 100%; border-collapse: collapse; }
+        .preview-table th, .preview-table td { padding: 8px; text-align: left; border-bottom: 1px solid var(--border-color); }
+        .preview-table tbody tr:hover { background-color: var(--hover-bg-color); }
+        .filter-btn-group { display: flex; gap: 0; margin-bottom: 10px; }
+        .filter-btn { flex: 1; background-color: var(--neutral-color); border: 1px solid var(--neutral-hover-color); color: white; padding: 8px; cursor: pointer; transition: background-color 0.3s, color 0.3s; font-size: 0.9em; }
+        .filter-btn:not(:last-child) { border-right: none; }
+        .filter-btn:first-child { border-top-left-radius: 5px; border-bottom-left-radius: 5px; }
+        .filter-btn:last-child { border-top-right-radius: 5px; border-bottom-right-radius: 5px; }
+        .filter-btn.active { background-color: var(--primary-color); }
+        .mesa-list { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+        .mesa-tag { background-color: var(--neutral-color); color: white; padding: 5px 10px; border-radius: 5px; display: flex; align-items: center; gap: 8px; cursor: grab; }
+        .mesa-tag:active { cursor: grabbing; }
+        .delete-mesa { background: none; border: none; color: white; cursor: pointer; font-weight: bold; }
+        .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: var(--modal-bg); backdrop-filter: blur(5px); align-items: center; justify-content: center; }
+        .modal-content { background-color: var(--surface-color); margin: auto; padding: 20px; border-radius: 8px; width: 90%; max-width: 400px; box-shadow: 0 5px 15px var(--shadow-color); text-align: center; }
+        .modal-content h3 { margin-top: 0; }
+        .modal-content p { margin-bottom: 20px; }
+        .modal-buttons { display: flex; justify-content: center; gap: 10px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Panel de Gestión del Sistema de Horarios</h1>
+            <p>Administra la base de datos de croupiers en Google Sheets y las mesas de juego locales.</p>
+            <a href="./horario.html" class="open-horario-btn">Abrir Vista de Horarios</a>
+        </div>
+        <div class="controles-container">
+            <div class="control-panel" id="panel-croupiers">
+                <div class="loading-overlay" style="display: none;"><span>Cargando...</span></div>
+                <h3>Croupiers y Juegos (Google Sheets)</h3>
+                <div class="form-group">
+                    <h4>Agregar Croupier a Google Sheets</h4>
+                    <input type="text" id="nuevo-croupier-input" placeholder="Nombre y Apellido">
+                    <select id="nuevo-croupier-contrato">
+                        <option value="planta">Planta</option>
+                        <option value="partime">Part-Time</option>
+                        <option value="llamado">Llamado</option>
+                    </select>
+                    <div class="juegos-selector" id="juegos-selector-croupier">
+                        <div class="juegos-selector-display">Seleccionar juegos</div>
+                        <div class="dropdown-juegos" id="dropdown-juegos"></div>
+                    </div>
+                    <button id="btn-agregar-croupier-db">Agregar a la Base de Datos</button>
+                </div>
+                <hr>
+                <h4>Croupiers Registrados <span id="contador-croupiers-registrados" class="contador-badge">0</span></h4>
+                <div class="filter-btn-group" id="croupier-filter-buttons">
+                    <button class="filter-btn active" data-filter="todos">Todos</button>
+                    <button class="filter-btn" data-filter="planta">Planta</button>
+                    <button class="filter-btn" data-filter="partime">Part Time</button>
+                    <button class="filter-btn" data-filter="llamado">Llamado</button>
+                </div>
+                <div class="preview-table-container">
+                    <table class="preview-table" id="croupier-pre-table">
+                        <thead><tr><th>Nombre</th></tr></thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="control-panel">
+                <h3>Mesas de Juego (Datos Locales)</h3>
+                <div class="form-group">
+                    <input type="text" id="nueva-mesa-input" placeholder="ID de Mesa">
+                    <button id="btn-agregar-mesa">Agregar Mesa</button>
+                </div>
+                <div id="mesas-list" class="mesa-list"></div>
+            </div>
+
+            <div class="control-panel">
+                <h3>Opciones del Sistema</h3>
+                <div class="form-group">
+                    <h4>Restaurar Respaldo</h4>
+                    <p style="font-size: 0.9em; color: var(--text-secondary-color);">Carga un archivo .json para añadir croupiers a Google Sheets.</p>
+                    <label for="file-input-restore" class="button-label">Restaurar desde Archivo</label>
+                    <input type="file" id="file-input-restore" accept=".json" style="display: none;">
+                </div>
+                <hr>
+                <div class="form-group">
+                    <h4>Opciones de Borrado (Datos Locales)</h4>
+                    <button id="btn-clear-horario-only" class="danger">Borrar SOLO tabla de Horarios</button>
+                    <button id="btn-clear-croupiers-only" class="danger">Borrar SOLO Croupiers de la tabla</button>
+                </div>
+                <hr>
+                <div class="form-group">
+                    <h4>Tema de la Página</h4>
+                    <button id="btn-toggle-theme">Cambiar Tema</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div id="custom-alert-modal" class="modal">
+        <div class="modal-content">
+            <h3 id="custom-alert-title"></h3>
+            <p id="custom-alert-message"></p>
+            <div class="modal-buttons">
+                <button id="custom-alert-cancel" class="danger" style="display: none;">Cancelar</button>
+                <button id="custom-alert-ok" class="success">OK</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzjaL7OKe1_doagry1eo0w15vXOJy_-oEtWreLTzj1GoQgxyE8cDI7jTgWm7qqThB7M/exec'; 
+
+            let croupiersEnEspera = []; 
+            let mesasDeJuego = [];
+            let juegosMaestro = ["Poker", "Blackjack", "Ruleta", "Craps", "Mini&PuntoyBanca", "Bug-six", "Caribbean", "Draw", "Hold'em"];
+            let currentContratoFilter = 'todos';
+
+            const DOM = {
+                panelCroupiers: document.getElementById('panel-croupiers'),
+                nuevoCroupierInput: document.getElementById('nuevo-croupier-input'),
+                nuevoCroupierContrato: document.getElementById('nuevo-croupier-contrato'),
+                juegosSelectorCroupier: document.getElementById('juegos-selector-croupier'),
+                dropdownJuegos: document.getElementById('dropdown-juegos'),
+                btnAgregarCroupierDB: document.getElementById('btn-agregar-croupier-db'),
+                contadorRegistrados: document.getElementById('contador-croupiers-registrados'),
+                croupierFilterButtons: document.getElementById('croupier-filter-buttons'),
+                croupierPreTableBody: document.getElementById('croupier-pre-table').querySelector('tbody'),
+                nuevaMesaInput: document.getElementById('nueva-mesa-input'),
+                btnAgregarMesa: document.getElementById('btn-agregar-mesa'),
+                mesasListDiv: document.getElementById('mesas-list'),
+                btnToggleTheme: document.getElementById('btn-toggle-theme'),
+                fileInputRestore: document.getElementById('file-input-restore'),
+                btnClearHorarioOnly: document.getElementById('btn-clear-horario-only'),
+                btnClearCroupiersOnly: document.getElementById('btn-clear-croupiers-only'),
+                customAlertModal: document.getElementById('custom-alert-modal'),
+                customAlertTitle: document.getElementById('custom-alert-title'),
+                customAlertMessage: document.getElementById('custom-alert-message'),
+                customAlertOkBtn: document.getElementById('custom-alert-ok'),
+                customAlertCancelBtn: document.getElementById('custom-alert-cancel'),
+            };
+
+            function showLoading(show) { DOM.panelCroupiers.querySelector('.loading-overlay').style.display = show ? 'flex' : 'none'; }
+            function showModal(title, message, type = 'info', onConfirm = null) {
+                DOM.customAlertTitle.textContent = title; DOM.customAlertMessage.textContent = message;
+                const okBtn = DOM.customAlertOkBtn; const cancelBtn = DOM.customAlertCancelBtn;
+                cancelBtn.style.display = type === 'confirm' ? 'inline-block' : 'none';
+                okBtn.textContent = type === 'confirm' ? 'Aceptar' : 'OK';
+                okBtn.onclick = () => { if (onConfirm) onConfirm(); DOM.customAlertModal.style.display = 'none'; };
+                cancelBtn.onclick = () => { DOM.customAlertModal.style.display = 'none'; };
+                DOM.customAlertModal.style.display = 'flex';
+            }
+            
+            function cargarDatosLocales() {
+                mesasDeJuego = JSON.parse(localStorage.getItem('mesasDeJuego')) || [];
+                const savedTheme = localStorage.getItem('theme') || 'light';
+                document.body.classList.toggle('dark-mode', savedTheme === 'dark');
+            }
+            
+            function guardarMesas() {
+                localStorage.setItem('mesasDeJuego', JSON.stringify(mesasDeJuego));
+                window.dispatchEvent(new Event('storage'));
+            }
+
+            async function fetchCroupiersFromSheet() {
+                showLoading(true);
+                try {
+                    const response = await fetch(SCRIPT_URL);
+                    if (!response.ok) throw new Error('Failed to fetch. Revisa la URL y los permisos del script.');
+                    croupiersEnEspera = await response.json();
+                    localStorage.setItem('croupiersEnEspera', JSON.stringify(croupiersEnEspera));
+                    window.dispatchEvent(new Event('storage'));
+                    renderAll();
+                } catch (error) {
+                    showModal('Error de Conexión', error.message, 'info');
+                } finally {
+                    showLoading(false);
+                }
+            }
+
+            async function addCroupierToSheet() {
+                const nombreCompleto = DOM.nuevoCroupierInput.value.trim();
+                if (!nombreCompleto) { showModal('Error', 'El nombre es obligatorio.', 'info'); return; }
+                if (croupiersEnEspera.some(c => c.nombreCompleto.toLowerCase() === nombreCompleto.toLowerCase())) {
+                    showModal('Error', 'Este croupier ya existe.', 'info'); return;
+                }
+                const nuevoCroupier = { nombreCompleto, contrato: DOM.nuevoCroupierContrato.value, juegosQuePaga: Array.from(DOM.dropdownJuegos.querySelectorAll('input:checked')).map(cb => cb.value) };
+                showLoading(true);
+                try {
+                    await fetch(SCRIPT_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify(nuevoCroupier) });
+                    DOM.nuevoCroupierInput.value = '';
+                    DOM.dropdownJuegos.querySelectorAll('input:checked').forEach(cb => cb.checked = false);
+                    showModal('Éxito', `${nuevoCroupier.nombreCompleto} fue agregado. Actualizando...`, 'info');
+                    setTimeout(fetchCroupiersFromSheet, 2000);
+                } catch (error) {
+                    showModal('Error al Guardar', error.message, 'info');
+                } finally {
+                    showLoading(false);
+                }
+            }
+
+            async function restaurarBackup(event) {
+                const file = event.target.files[0];
+                if (!file) return;
+                const reader = new FileReader();
+                reader.onload = async (e) => {
+                    try {
+                        const backupData = JSON.parse(e.target.result);
+                        if (!backupData.croupiersEnEspera) { showModal('Error', 'El archivo de respaldo no es válido.', 'info'); return; }
+                        const payload = { action: 'restoreBackup', data: backupData };
+                        showLoading(true);
+                        const response = await fetch(SCRIPT_URL, { method: 'POST', body: JSON.stringify(payload), redirect: 'follow' });
+                        const result = await response.json();
+                        if (result.status === 'success') {
+                            showModal('Restauración Completa', result.message, 'info');
+                            setTimeout(fetchCroupiersFromSheet, 1000);
+                        } else { throw new Error(result.message); }
+                    } catch (error) {
+                        showModal('Error al Restaurar', `No se pudo procesar. Error: ${error.message}`, 'info');
+                    } finally {
+                        showLoading(false);
+                        event.target.value = '';
+                    }
+                };
+                reader.readAsText(file);
+            }
+
+            function renderizarMesasList() {
+                DOM.mesasListDiv.innerHTML = '';
+                mesasDeJuego.forEach(mesa => {
+                    const mesaTag = document.createElement('div');
+                    mesaTag.className = 'mesa-tag';
+                    mesaTag.textContent = mesa;
+                    mesaTag.dataset.id = mesa;
+                    const deleteBtn = document.createElement('button');
+                    deleteBtn.className = 'delete-mesa';
+                    deleteBtn.textContent = '×';
+                    deleteBtn.addEventListener('click', () => borrarMesa(mesa));
+                    mesaTag.appendChild(deleteBtn);
+                    DOM.mesasListDiv.appendChild(mesaTag);
+                });
+            }
+
+            function agregarMesa() {
+                const nuevaMesa = DOM.nuevaMesaInput.value.trim();
+                if (nuevaMesa && !mesasDeJuego.some(m => m.toLowerCase() === nuevaMesa.toLowerCase())) {
+                    mesasDeJuego.push(nuevaMesa);
+                    DOM.nuevaMesaInput.value = '';
+                    guardarMesas();
+                    renderizarMesasList();
+                } else {
+                    showModal('Error', 'La mesa no puede estar vacía o ya existe.', 'info');
+                }
+            }
+
+            function borrarMesa(mesaABorrar) {
+                showModal('Eliminar Mesa', `¿Estás seguro de que quieres eliminar la mesa "${mesaABorrar}"?`, 'confirm', () => {
+                    mesasDeJuego = mesasDeJuego.filter(m => m !== mesaABorrar);
+                    guardarMesas();
+                    renderizarMesasList();
+                });
+            }
+
+            function borrarSoloHorarios() { showModal('Borrar Horarios', 'Se borrarán todas las columnas de horarios y las asignaciones guardadas en este navegador. ¿Continuar?', 'confirm', () => { localStorage.removeItem('horarios'); localStorage.removeItem('datosRelevos'); localStorage.removeItem('horarioColors'); localStorage.removeItem('fechaGuardada'); window.dispatchEvent(new Event('storage')); showModal('Éxito', 'Los datos del horario local han sido borrados.', 'info'); }); }
+            function borrarSoloCroupiersDeTabla() { showModal('Borrar Croupiers de Tabla', 'Se eliminarán todos los croupiers de la tabla de horarios local. No se borrarán de Google Sheets. ¿Continuar?', 'confirm', () => { localStorage.removeItem('croupiersData'); localStorage.removeItem('datosRelevos'); localStorage.removeItem('croupierColors'); localStorage.removeItem('croupierSalidas'); localStorage.removeItem('cronometroState'); window.dispatchEvent(new Event('storage')); showModal('Éxito', 'Los croupiers de la tabla local han sido borrados.', 'info'); }); }
+            
+            function renderAll() {
+                renderizarCroupiersPreTable(currentContratoFilter);
+                renderizarJuegosDropdown();
+                renderizarMesasList();
+            }
+
+            function renderizarCroupiersPreTable(contratoFilter = 'todos') {
+                DOM.croupierPreTableBody.innerHTML = '';
+                const filteredCroupiers = croupiersEnEspera.filter(c => contratoFilter === 'todos' || c.contrato === contratoFilter);
+                DOM.contadorRegistrados.textContent = filteredCroupiers.length;
+                filteredCroupiers.forEach(croupier => {
+                    const tr = document.createElement('tr');
+                    const tdNombre = document.createElement('td');
+                    tdNombre.textContent = croupier.nombreCompleto;
+                    tr.appendChild(tdNombre);
+                    DOM.croupierPreTableBody.appendChild(tr);
+                });
+            }
+            function renderizarJuegosDropdown() { DOM.dropdownJuegos.innerHTML = ''; juegosMaestro.forEach(juego => { const label = document.createElement('label'), checkbox = document.createElement('input'); checkbox.type = 'checkbox'; checkbox.value = juego; label.appendChild(checkbox); label.append(` ${juego}`); DOM.dropdownJuegos.appendChild(label); }); }
+            
+            function inicializar() {
+                cargarDatosLocales(); 
+                fetchCroupiersFromSheet();
+
+                DOM.btnAgregarMesa.addEventListener('click', agregarMesa);
+                new Sortable(DOM.mesasListDiv, {
+                    animation: 150,
+                    onEnd: () => {
+                        mesasDeJuego = Array.from(DOM.mesasListDiv.children).map(tag => tag.dataset.id);
+                        guardarMesas();
+                    }
+                });
+
+                DOM.btnAgregarCroupierDB.addEventListener('click', addCroupierToSheet);
+                DOM.fileInputRestore.addEventListener('change', restaurarBackup);
+                DOM.btnClearHorarioOnly.addEventListener('click', borrarSoloHorarios);
+                DOM.btnClearCroupiersOnly.addEventListener('click', borrarSoloCroupiersDeTabla);
+                DOM.croupierFilterButtons.addEventListener('click', (e) => { if (e.target.classList.contains('filter-btn')) { DOM.croupierFilterButtons.querySelector('.active').classList.remove('active'); e.target.classList.add('active'); currentContratoFilter = e.target.dataset.filter; renderizarCroupiersPreTable(currentContratoFilter); } });
+                DOM.juegosSelectorCroupier.addEventListener('click', (e) => { e.stopPropagation(); DOM.juegosSelectorCroupier.classList.toggle('active'); });
+                document.body.addEventListener('click', () => { DOM.juegosSelectorCroupier.classList.remove('active'); });
+                DOM.btnToggleTheme.addEventListener('click', () => { const isDark = document.body.classList.toggle('dark-mode'); localStorage.setItem('theme', isDark ? 'dark' : 'light'); window.dispatchEvent(new Event('storage')); });
+                DOM.customAlertOkBtn.addEventListener('click', () => { DOM.customAlertModal.style.display = 'none'; });
+                DOM.customAlertCancelBtn.addEventListener('click', () => { DOM.customAlertModal.style.display = 'none'; });
+            }
+            inicializar();
+        });
+    </script>
+</body>
+</html>
+
+
