@@ -3,71 +3,70 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Vista de Turno Actual</title>
+    <title>Visualizador de Horarios</title>
     <style>
-        /* Estilos consistentes con los otros archivos para una apariencia unificada */
         :root {
-            --bg-color: #f4f7f9;
-            --surface-color: #ffffff;
-            --sticky-col-bg: #f4f7f9;
-            --text-color: #34495e;
-            --text-secondary-color: #7f8c8d;
-            --border-color: #ecf0f1;
-            --shadow-color: rgba(0, 0, 0, 0.1);
-            --primary-color: #3498db;
-            --success-color: #2ecc71;
-            --neutral-color: #bdc3c7;
-            --current-time-bg: #d1ecf1; /* Color para destacar la columna actual */
-        }
-
-        body.dark-mode {
-            --bg-color: #121212;
-            --surface-color: #1e1e1e;
-            --sticky-col-bg: #2a2a2a;
-            --text-color: #e0e0e0;
+            --bg-color: #2c3e50;
+            --surface-color: #34495e;
+            --text-color: #ecf0f1;
             --text-secondary-color: #bdc3c7;
-            --border-color: #333333;
-            --shadow-color: rgba(0, 0, 0, 0.5);
-            --current-time-bg: #003c5a;
+            --border-color: #2c3e50;
+            --shadow-color: rgba(0, 0, 0, 0.2);
+            --primary-color: #3498db;
+            --primary-hover-color: #5dade2;
+            --success-color: #2ecc71;
+            --danger-color: #e74c3c;
         }
 
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             background-color: var(--bg-color);
             margin: 0;
-            padding: 15px;
+            padding: 20px;
             color: var(--text-color);
-            transition: background-color 0.3s ease, color 0.3s ease;
         }
 
-        .header-container {
-            text-align: center;
-            margin-bottom: 20px;
-            padding: 15px;
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
             background-color: var(--surface-color);
+            padding: 20px;
             border-radius: 8px;
-            box-shadow: 0 2px 4px var(--shadow-color);
-        }
-        
-        .reloj {
-            font-size: 2rem;
-            font-weight: bold;
-        }
-        
-        .fecha {
-            font-size: 1rem;
-            color: var(--text-secondary-color);
-            margin-top: 5px;
+            box-shadow: 0 4px 15px var(--shadow-color);
         }
 
-        .nav-links {
-            margin-top: 15px;
+        .header {
+            text-align: center;
+            margin-bottom: 25px;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 20px;
+        }
+
+        h1 { color: var(--primary-color); margin: 0; }
+        
+        .controls {
             display: flex;
             justify-content: center;
-            gap: 10px;
+            align-items: center;
+            gap: 15px;
+            margin-top: 15px;
+            flex-wrap: wrap;
+        }
+
+        .controls label { font-weight: bold; }
+
+        .controls input[type="date"] {
+            padding: 8px;
+            border: 1px solid var(--border-color);
+            background-color: #2c3e50;
+            color: var(--text-color);
+            border-radius: 5px;
+            font-size: 1em;
         }
         
         .nav-link {
+            display: inline-block;
+            margin-top: 10px;
             padding: 8px 16px;
             background-color: var(--primary-color);
             color: white;
@@ -75,330 +74,284 @@
             border-radius: 5px;
             font-weight: bold;
             transition: background-color 0.3s ease;
-            font-size: 0.9em;
         }
 
-        .horario-container {
-            max-width: 100%;
-            margin: 0 auto;
-            border-radius: 8px;
-            overflow: hidden;
-            box-shadow: 0 4px 6px var(--shadow-color);
-            background-color: var(--surface-color);
+        .nav-link:hover { background-color: var(--primary-hover-color); }
+        
+        #status-message {
+            text-align: center;
+            font-size: 1.2em;
+            color: var(--text-secondary-color);
+            padding: 40px 0;
         }
 
-        .horario-tabla-wrapper {
-            overflow-x: auto;
-        }
-
+        .horario-tabla-container { overflow-x: auto; }
+        
         .tabla {
             width: 100%;
             border-collapse: collapse;
+            margin-top: 20px;
         }
 
         .tabla th, .tabla td {
             border: 1px solid var(--border-color);
             padding: 8px;
             text-align: center;
-            font-size: 0.9rem;
+            font-size: 0.9em;
+            white-space: nowrap;
+            transition: opacity 0.5s ease-in-out, width 0.5s ease-in-out;
         }
 
         .tabla thead th {
-            background-color: var(--surface-color);
+            background-color: #2c3e50;
             font-weight: bold;
             position: sticky;
             top: 0;
             z-index: 2;
         }
         
-        .tabla th:first-child, .tabla td:first-child {
-            position: sticky;
-            left: 0;
-            background-color: var(--sticky-col-bg);
+        .tabla tbody th, .tabla tbody td:first-of-type {
             text-align: left;
             font-weight: bold;
-            min-width: 180px;
+            background-color: #2c3e50;
+            position: sticky;
+            left: 0;
             z-index: 1;
         }
         
-        .tabla thead th:first-child {
-            z-index: 3;
+        .tabla tbody td:nth-child(2) {
+            position: sticky;
+            left: 150px; /* Ancho de la primera columna */
+            background-color: #2c3e50;
+            z-index: 1;
         }
 
-        .croupier-cell-content {
-            display: flex;
-            flex-direction: column;
-        }
-
-        .crono-display-vista {
-            font-size: 0.8em;
+        .cronometro-display-view {
             font-weight: bold;
-            color: var(--text-color);
-            margin-top: 4px;
-            display: flex;
-            align-items: center;
-            gap: 5px;
+            padding: 4px;
+            border-radius: 4px;
         }
-        
-        .crono-display-vista.running {
-             color: var(--success-color);
-        }
+        .cronometro-display-view.running { background-color: var(--success-color); color: #fff; }
 
-        .tabla th.current-time, .tabla td.current-time {
-            background-color: var(--current-time-bg);
+        .relevo-cell-view {
+            padding: 4px;
+            border-radius: 4px;
+            font-size: 0.85em;
+            font-weight: bold;
+            color: white;
+            line-height: 1.3;
+            min-height: 20px;
         }
-
-        .relevo-cell {
-            padding: 4px; border-radius: 4px; font-size: 0.8rem; font-weight: bold;
-            color: white; line-height: 1.2; display: block;
-        }
-        .relevo-cell.ayudante-pagador { background-color: #8e44ad; }
+        .relevo-cell-view.ayudante-pagador { background-color: #8e44ad; }
+        .relevo-cell-view.descanso { background-color: #f39c12; }
     </style>
 </head>
 <body>
-    <div class="header-container">
-        <h1>Vista de Turno Actual</h1>
-        <div id="reloj-digital" class="reloj">00:00:00</div>
-        <div id="fecha-actual" class="fecha"></div>
-        <div class="nav-links">
-            <a href="./horario.html" class="nav-link">Ir a Horario Completo</a>
-            <a href="./base.html" class="nav-link">Ir a Gestión</a>
-        </div>
-    </div>
 
-    <div class="horario-container">
-        <div class="horario-tabla-wrapper">
-            <table class="tabla" id="tabla-horario-actual">
-                <thead></thead>
-                <tbody></tbody>
-            </table>
+    <div class="container">
+        <div class="header">
+            <h1>Visualizador de Horarios</h1>
+            <div class="controls">
+                <label for="fecha-selector">Seleccionar Fecha:</label>
+                <input type="date" id="fecha-selector">
+            </div>
+             <a href="index.html" class="nav-link">Ir al Editor de Horarios</a>
         </div>
+
+        <div id="status-message">Selecciona una fecha para ver el horario.</div>
+        <div id="horario-container" class="horario-tabla-container"></div>
     </div>
 
     <script>
         document.addEventListener('DOMContentLoaded', () => {
-            const SCRIPT_URL_HORARIOS = 'https://script.google.com/macros/s/AKfycbzPFN3DsRlqRg7kFlug6NGK7X7ufMbLZzn8XCUR7GCCr4Ft3UTcUhs11fYlkWTld83N/exec';
-            
-            const DOM = {
-                thead: document.getElementById('tabla-horario-actual').querySelector('thead'),
-                tbody: document.getElementById('tabla-horario-actual').querySelector('tbody'),
-                relojDigital: document.getElementById('reloj-digital'),
-                fechaDisplay: document.getElementById('fecha-actual'),
-            };
+            const URL_DEL_SCRIPT_DE_HORARIOS = 'https://script.google.com/macros/s/AKfycbx6-N3shrPlqQ5rOV2xkDL2cNIIp1lOYVfytv8L5lXC2hw_jqgmeJaiKyK9nrusMwS9vg/exec';
 
-            let cronosCongelados = {};
+            const fechaSelector = document.getElementById('fecha-selector');
+            const horarioContainer = document.getElementById('horario-container');
+            const statusMessage = document.getElementById('status-message');
 
-            // --- FUNCIÓN PRINCIPAL PARA OBTENER DATOS DE SHEETS ---
-            async function fetchHorarioFromSheets() {
-                DOM.tbody.innerHTML = '<tr><td colspan="4">Cargando datos desde la nube... ☁️</td></tr>';
-                const diaString = new Date().toISOString().split('T')[0];
-                const url = `${SCRIPT_URL_HORARIOS}?action=getHorario&dia=${diaString}`;
+            let cronometroIntervals = {};
+            let scheduleDataCache = null;
+
+            const getISODate = (date) => date.toISOString().split('T')[0];
+
+            const loadSchedule = async (fecha) => {
+                statusMessage.textContent = 'Cargando horario...';
+                statusMessage.style.display = 'block';
+                horarioContainer.innerHTML = '';
+                scheduleDataCache = null;
+                Object.values(cronometroIntervals).forEach(clearInterval);
+                cronometroIntervals = {};
 
                 try {
-                    const response = await fetch(url);
-                    if (!response.ok) {
-                        throw new Error(`Error de red: ${response.statusText}`);
-                    }
-                    const result = await response.json();
-                    
-                    if (result.status === 'success') {
-                        if (result.message === 'No data') {
-                           // Si no hay datos, limpiamos localStorage para no mostrar datos de otro día
-                           localStorage.removeItem('croupiersData');
-                           localStorage.removeItem('horarios');
-                           localStorage.removeItem('datosRelevos');
-                        } else {
-                            // Guardamos los datos frescos en localStorage para que el resto de la app los use
-                            localStorage.setItem('datosRelevos', JSON.stringify(result.data.relevos || {}));
-                            localStorage.setItem('croupiersData', JSON.stringify(result.data.croupiers || []));
-                            localStorage.setItem('horarios', JSON.stringify(result.data.horarios || []));
-                        }
+                    const response = await fetch(`${URL_DEL_SCRIPT_DE_HORARIOS}?action=load&fecha=${fecha}`);
+                    if (!response.ok) throw new Error(`Error de red: ${response.statusText}`);
+                    const data = await response.json();
+
+                    if (data && data.found) {
+                        statusMessage.style.display = 'none';
+                        scheduleDataCache = data;
+                        renderSchedule(data);
                     } else {
-                        throw new Error(result.message || 'Error desconocido al obtener los datos.');
+                        statusMessage.textContent = `No se encontró un horario para el ${new Date(fecha + 'T00:00:00').toLocaleDateString('es-ES', {day: '2-digit', month:'long', year:'numeric'})}.`;
                     }
                 } catch (error) {
-                    console.error('Error al obtener horario:', error);
-                    DOM.tbody.innerHTML = `<tr><td colspan="4">Error al cargar: ${error.message}</td></tr>`;
-                } finally {
-                    // Una vez terminado el fetch (con éxito o error), renderizamos la tabla
-                    // renderizarVistaActual leerá de localStorage, que acabamos de actualizar.
-                    renderizarVistaActual();
+                    console.error('Error al cargar el horario:', error);
+                    statusMessage.textContent = 'Error al conectar. Inténtalo de nuevo.';
                 }
-            }
-
-            function actualizarRelojYFecha() {
-                const now = new Date();
-                DOM.relojDigital.textContent = now.toTimeString().slice(0, 8);
-                DOM.fechaDisplay.textContent = now.toLocaleString('es-ES', {
-                    weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
-                });
-            }
+            };
             
-            function actualizarCronometrosVisibles() {
-                const cronometroState = JSON.parse(localStorage.getItem('cronometroState')) || {};
-                const displays = document.querySelectorAll('.crono-display-vista');
-                const TIEMPO_GRACIA_MS = 2 * 60 * 1000;
-
-                displays.forEach(display => {
-                    const croupierNombre = display.dataset.cronoCroupier;
-                    const startTime = cronometroState[croupierNombre];
-
-                    if (startTime) {
-                        const elapsed = new Date().getTime() - startTime;
-                        const formattedTime = new Date(elapsed).toISOString().slice(11, 19);
-                        display.innerHTML = `⏳ <span class="crono-timer">${formattedTime}</span>`;
-                        display.classList.add('running');
-                        display.style.display = 'flex';
-                        cronosCongelados[croupierNombre] = { tiempo: formattedTime, timestamp: Date.now() };
-
-                    } else if (cronosCongelados[croupierNombre]) {
-                        const ahora = Date.now();
-                        const tiempoGuardado = cronosCongelados[croupierNombre];
-
-                        if (ahora - tiempoGuardado.timestamp < TIEMPO_GRACIA_MS) {
-                            display.innerHTML = `⏸️ <span class="crono-timer">${tiempoGuardado.tiempo}</span>`;
-                            display.classList.remove('running');
-                            display.style.display = 'flex';
-                        } else {
-                            delete cronosCongelados[croupierNombre];
-                            display.style.display = 'none';
-                        }
-                    } else {
-                        display.style.display = 'none';
-                    }
-                });
-            }
-
-            function sortHorarios(a, b) {
-                let aHour = parseInt(a.split(':')[0], 10), bHour = parseInt(b.split(':')[0], 10);
+            const sortHorarios = (a, b) => {
+                let aHour = parseInt(a.split(':')[0], 10);
+                let bHour = parseInt(b.split(':')[0], 10);
                 if (aHour < 6) aHour += 24;
                 if (bHour < 6) bHour += 24;
-                if (aHour < bHour) return -1;
-                if (aHour > bHour) return 1;
-                let aMin = parseInt(a.split(':')[1], 10), bMin = parseInt(b.split(':')[1], 10);
-                return aMin - bMin;
-            }
+                return (aHour * 60 + parseInt(a.split(':')[1], 10)) - (bHour * 60 + parseInt(b.split(':')[1], 10));
+            };
 
-            function determinarHorariosVisibles(horarios) {
-                const ahora = new Date();
-                const retrasoEnMs = 2 * 60 * 1000;
-                const tiempoDeComparacion = ahora.getTime() - retrasoEnMs;
+            const renderSchedule = (data) => {
+                const { croupiersEnTabla, horarios, datosRelevos, croupierColors, cronometroStartTime } = data;
                 
-                const horariosOrdenados = [...horarios].sort(sortHorarios);
-                let indiceActual = -1;
-
-                for (let i = 0; i < horariosOrdenados.length; i++) {
-                    const [h, m] = horariosOrdenados[i].split(':').map(Number);
-                    const fechaHorario = new Date();
-                    fechaHorario.setHours(h, m, 0, 0);
-                    if (h < 6 && ahora.getHours() > 18) {
-                        fechaHorario.setDate(fechaHorario.getDate() + 1);
-                    }
-                    if (fechaHorario.getTime() <= tiempoDeComparacion) {
-                        indiceActual = i;
-                    }
+                if (!croupiersEnTabla || croupiersEnTabla.length === 0) {
+                     statusMessage.textContent = 'El horario para esta fecha no tiene croupiers.';
+                     statusMessage.style.display = 'block';
+                     return;
                 }
                 
-                if (indiceActual === -1 && horariosOrdenados.length > 0) {
-                    indiceActual = 0;
-                }
+                horarios.sort(sortHorarios);
 
-                return indiceActual !== -1 ? horariosOrdenados.slice(indiceActual, indiceActual + 3) : [];
-            }
+                const table = document.createElement('table');
+                table.className = 'tabla';
 
-            function crearTarjetaRelevo(relevoData) {
-                const div = document.createElement('div');
-                div.className = 'relevo-cell';
-                if (!relevoData) return div;
-
-                switch (relevoData.actividad) {
-                    case 'releva':
-                        div.style.backgroundColor = relevoData.color || '#3498db';
-                        div.textContent = relevoData.mesas.join(' - ');
-                        break;
-                    case 'ayudante-pagador':
-                        div.classList.add('ayudante-pagador');
-                        div.textContent = 'AYUD. PAGADOR';
-                        break;
-                    case 'descanso':
-                        div.style.backgroundColor = '#f39c12';
-                        div.textContent = 'DESCANSO';
-                        break;
-                    default:
-                        div.style.backgroundColor = '#95a5a6';
-                        div.textContent = 'S/A';
-                }
-                return div;
-            }
-            
-            function renderizarVistaActual() {
-                const croupiersData = JSON.parse(localStorage.getItem('croupiersData')) || [];
-                const horarios = JSON.parse(localStorage.getItem('horarios')) || [];
-                const datosRelevos = JSON.parse(localStorage.getItem('datosRelevos')) || {};
-                const savedTheme = localStorage.getItem('theme') || 'light';
-                document.body.classList.toggle('dark-mode', savedTheme === 'dark');
-
-                if (croupiersData.length === 0 || horarios.length === 0) {
-                    DOM.tbody.innerHTML = '<tr><td colspan="4">No hay datos de horario para el día de hoy.</td></tr>';
-                    DOM.thead.innerHTML = '';
-                    return;
-                }
-
-                const horariosVisibles = determinarHorariosVisibles(horarios);
-
-                DOM.thead.innerHTML = '';
-                const headerRow = document.createElement('tr');
-                headerRow.innerHTML = '<th>Croupier</th>';
-                horariosVisibles.forEach((hora, index) => {
-                    const th = document.createElement('th');
-                    th.textContent = hora;
-                    if (index === 0) th.classList.add('current-time');
-                    headerRow.appendChild(th);
+                // --- Cabecera ---
+                let headerRow = `<thead><tr><th>Croupier</th><th>Crono.</th>`;
+                horarios.forEach(hora => {
+                    headerRow += `<th data-horario-header="${hora}">${hora}</th>`;
                 });
-                DOM.thead.appendChild(headerRow);
+                headerRow += '</tr></thead>';
+                table.innerHTML = headerRow;
 
-                DOM.tbody.innerHTML = '';
-                croupiersData.forEach(croupier => {
+                // --- Cuerpo ---
+                const tbody = document.createElement('tbody');
+                croupiersEnTabla.forEach(croupier => {
                     const tr = document.createElement('tr');
-                    
-                    const tdNombre = document.createElement('td');
-                    tdNombre.innerHTML = `
-                        <div class="croupier-cell-content">
-                            <span>${croupier.nombreCompleto}</span>
-                            <div class="crono-display-vista" data-crono-croupier="${croupier.nombreCompleto}" style="display: none;"></div>
-                        </div>`;
-                    tr.appendChild(tdNombre);
+                    const croupierColor = croupierColors ? croupierColors[croupier] : null;
 
-                    horariosVisibles.forEach((hora, index) => {
-                        const td = document.createElement('td');
-                        if (index === 0) td.classList.add('current-time');
-                        
-                        const relevoData = datosRelevos[croupier.nombreCompleto]?.[hora];
-                        td.appendChild(crearTarjetaRelevo(relevoData));
-                        tr.appendChild(td);
+                    let rowHTML = `<th style="${croupierColor ? `background-color:${croupierColor};` : ''}">${croupier}</th>`;
+                    rowHTML += `
+                        <td>
+                            <div class="cronometro-display-view" data-croupier-crono="${croupier}">
+                                00:00:00
+                            </div>
+                        </td>`;
+
+                    horarios.forEach(hora => {
+                        const relevoData = datosRelevos[croupier]?.[hora];
+                        let cellContent = '';
+                        if (relevoData) {
+                            const div = document.createElement('div');
+                            div.className = 'relevo-cell-view';
+                            switch (relevoData.actividad) {
+                                case 'releva': div.style.backgroundColor = relevoData.color; div.textContent = relevoData.mesas.join(' - '); break;
+                                case 'ayudante-pagador': div.classList.add('ayudante-pagador'); div.textContent = 'A. PAGADOR'; break;
+                                case 'descanso': div.classList.add('descanso'); div.textContent = 'DESCANSO'; break;
+                                default: div.style.backgroundColor = '#95a5a6'; div.textContent = 'S/A';
+                            }
+                            cellContent = div.outerHTML;
+                        }
+                        rowHTML += `<td data-horario-cell="${hora}">${cellContent}</td>`;
                     });
-                    DOM.tbody.appendChild(tr);
+                    tr.innerHTML = rowHTML;
+                    tbody.appendChild(tr);
+                });
+                table.appendChild(tbody);
+                horarioContainer.appendChild(table);
+
+                // Iniciar cronómetros
+                if (cronometroStartTime) {
+                    Object.entries(cronometroStartTime).forEach(([croupier, startTime]) => {
+                        iniciarCronometro(croupier, startTime);
+                    });
+                }
+                
+                // Actualizar la vista de horarios por primera vez
+                actualizarVisibilidadHorarios();
+            };
+
+            const iniciarCronometro = (croupier, startTime) => {
+                if (!startTime) return;
+                
+                const update = () => {
+                    const elapsed = new Date().getTime() - startTime;
+                    const display = document.querySelector(`[data-croupier-crono="${croupier}"]`);
+                    if (display && elapsed >= 0) {
+                       display.textContent = new Date(elapsed).toISOString().slice(11, 19);
+                       display.classList.add('running');
+                    }
+                };
+                
+                if (cronometroIntervals[croupier]) clearInterval(cronometroIntervals[croupier]);
+                cronometroIntervals[croupier] = setInterval(update, 1000);
+                update();
+            };
+
+            const actualizarVisibilidadHorarios = () => {
+                if (!scheduleDataCache) return;
+                
+                const { horarios } = scheduleDataCache;
+                const now = new Date();
+                const fechaBase = new Date(fechaSelector.value + 'T00:00:00');
+
+                const schedulePoints = horarios.map(hora => {
+                    const [h, m] = hora.split(':').map(Number);
+                    const scheduleDate = new Date(fechaBase);
+                    scheduleDate.setHours(h, m, 0, 0);
+                    if (h < 6) scheduleDate.setDate(scheduleDate.getDate() + 1);
+                    return scheduleDate;
                 });
 
-                actualizarCronometrosVisibles();
-            }
+                let currentIndex = -1;
+                for (let i = 0; i < schedulePoints.length; i++) {
+                    if (schedulePoints[i] <= now) {
+                        currentIndex = i;
+                    } else {
+                        break;
+                    }
+                }
 
-            function inicializar() {
-                actualizarRelojYFecha();
-                fetchHorarioFromSheets(); // Llama a la función para obtener datos al iniciar
+                document.querySelectorAll('[data-horario-header], [data-horario-cell]').forEach(el => {
+                    el.style.display = 'none';
+                });
 
-                setInterval(actualizarRelojYFecha, 1000);
-                setInterval(actualizarCronometrosVisibles, 1000);
-                
-                // Refresca los datos desde la nube cada 30 segundos
-                setInterval(fetchHorarioFromSheets, 30000);
+                if (currentIndex !== -1) {
+                    const currentHorario = horarios[currentIndex];
+                    document.querySelectorAll(`[data-horario-header="${currentHorario}"], [data-horario-cell="${currentHorario}"]`).forEach(el => el.style.display = 'table-cell');
+                    
+                    if (currentIndex > 0) {
+                        const previousHorario = horarios[currentIndex - 1];
+                        document.querySelectorAll(`[data-horario-header="${previousHorario}"], [data-horario-cell="${previousHorario}"]`).forEach(el => el.style.display = 'table-cell');
+                    }
+                } else if (horarios.length > 0) {
+                     // Si aún no ha comenzado el primer horario, mostramos solo el primero
+                     const firstHorario = horarios[0];
+                     document.querySelectorAll(`[data-horario-header="${firstHorario}"], [data-horario-cell="${firstHorario}"]`).forEach(el => el.style.display = 'table-cell');
+                }
+            };
 
-                window.addEventListener('storage', renderizarVistaActual);
-            }
+            // --- Eventos e Inicialización ---
+            fechaSelector.addEventListener('change', () => {
+                if (fechaSelector.value) {
+                    loadSchedule(fechaSelector.value);
+                }
+            });
 
-            inicializar();
+            const today = new Date();
+            fechaSelector.value = getISODate(today);
+            loadSchedule(fechaSelector.value);
+            setInterval(actualizarVisibilidadHorarios, 5000); // Actualiza la vista cada 5 segundos
         });
     </script>
 </body>
 </html>
+
 
