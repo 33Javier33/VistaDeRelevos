@@ -6,16 +6,14 @@
     <title>Visualizador de Horarios</title>
     <style>
         :root {
-            --bg-color: #2c3e50;
-            --surface-color: #34495e;
-            --text-color: #ecf0f1;
-            --text-secondary-color: #bdc3c7;
-            --border-color: #2c3e50;
-            --shadow-color: rgba(0, 0, 0, 0.2);
+            --bg-color: #f4f7f9;
+            --surface-color: #ffffff;
+            --text-color: #34495e;
+            --text-secondary-color: #7f8c8d;
+            --border-color: #ecf0f1;
+            --shadow-color: rgba(0, 0, 0, 0.1);
             --primary-color: #3498db;
-            --primary-hover-color: #5dade2;
-            --success-color: #2ecc71;
-            --danger-color: #e74c3c;
+            --primary-hover-color: #2980b9;
         }
 
         body {
@@ -24,6 +22,7 @@
             margin: 0;
             padding: 20px;
             color: var(--text-color);
+            font-size: 16px;
         }
 
         .container {
@@ -32,7 +31,7 @@
             background-color: var(--surface-color);
             padding: 20px;
             border-radius: 8px;
-            box-shadow: 0 4px 15px var(--shadow-color);
+            box-shadow: 0 4px 6px var(--shadow-color);
         }
 
         .header {
@@ -42,7 +41,10 @@
             padding-bottom: 20px;
         }
 
-        h1 { color: var(--primary-color); margin: 0; }
+        h1 {
+            color: var(--primary-color);
+            margin: 0;
+        }
         
         .controls {
             display: flex;
@@ -53,13 +55,13 @@
             flex-wrap: wrap;
         }
 
-        .controls label { font-weight: bold; }
+        .controls label {
+            font-weight: bold;
+        }
 
         .controls input[type="date"] {
             padding: 8px;
             border: 1px solid var(--border-color);
-            background-color: #2c3e50;
-            color: var(--text-color);
             border-radius: 5px;
             font-size: 1em;
         }
@@ -76,7 +78,9 @@
             transition: background-color 0.3s ease;
         }
 
-        .nav-link:hover { background-color: var(--primary-hover-color); }
+        .nav-link:hover {
+            background-color: var(--primary-hover-color);
+        }
         
         #status-message {
             text-align: center;
@@ -85,7 +89,9 @@
             padding: 40px 0;
         }
 
-        .horario-tabla-container { overflow-x: auto; }
+        .horario-tabla-container {
+            overflow-x: auto;
+        }
         
         .tabla {
             width: 100%;
@@ -99,40 +105,25 @@
             text-align: center;
             font-size: 0.9em;
             white-space: nowrap;
-            transition: opacity 0.5s ease-in-out, width 0.5s ease-in-out;
         }
 
         .tabla thead th {
-            background-color: #2c3e50;
+            background-color: #e9ecef;
             font-weight: bold;
             position: sticky;
             top: 0;
             z-index: 2;
         }
         
-        .tabla tbody th, .tabla tbody td:first-of-type {
+        .tabla tbody th {
             text-align: left;
             font-weight: bold;
-            background-color: #2c3e50;
+            background-color: #f8f9fa;
             position: sticky;
             left: 0;
             z-index: 1;
         }
         
-        .tabla tbody td:nth-child(2) {
-            position: sticky;
-            left: 150px; /* Ancho de la primera columna */
-            background-color: #2c3e50;
-            z-index: 1;
-        }
-
-        .cronometro-display-view {
-            font-weight: bold;
-            padding: 4px;
-            border-radius: 4px;
-        }
-        .cronometro-display-view.running { background-color: var(--success-color); color: #fff; }
-
         .relevo-cell-view {
             padding: 4px;
             border-radius: 4px;
@@ -140,7 +131,8 @@
             font-weight: bold;
             color: white;
             line-height: 1.3;
-            min-height: 20px;
+            display: block;
+            min-height: 20px; /* Asegura que la celda tenga altura aunque esté vacía */
         }
         .relevo-cell-view.ayudante-pagador { background-color: #8e44ad; }
         .relevo-cell-view.descanso { background-color: #f39c12; }
@@ -170,34 +162,35 @@
             const horarioContainer = document.getElementById('horario-container');
             const statusMessage = document.getElementById('status-message');
 
-            let cronometroIntervals = {};
-            let scheduleDataCache = null;
-
-            const getISODate = (date) => date.toISOString().split('T')[0];
+            // Función para formatear la fecha a YYYY-MM-DD
+            const getISODate = (date) => {
+                const year = date.getFullYear();
+                const month = String(date.getMonth() + 1).padStart(2, '0');
+                const day = String(date.getDate()).padStart(2, '0');
+                return `${year}-${month}-${day}`;
+            };
 
             const loadSchedule = async (fecha) => {
                 statusMessage.textContent = 'Cargando horario...';
                 statusMessage.style.display = 'block';
                 horarioContainer.innerHTML = '';
-                scheduleDataCache = null;
-                Object.values(cronometroIntervals).forEach(clearInterval);
-                cronometroIntervals = {};
 
                 try {
                     const response = await fetch(`${URL_DEL_SCRIPT_DE_HORARIOS}?action=load&fecha=${fecha}`);
-                    if (!response.ok) throw new Error(`Error de red: ${response.statusText}`);
+                    if (!response.ok) {
+                        throw new Error(`Error de red: ${response.statusText}`);
+                    }
                     const data = await response.json();
 
                     if (data && data.found) {
                         statusMessage.style.display = 'none';
-                        scheduleDataCache = data;
                         renderSchedule(data);
                     } else {
-                        statusMessage.textContent = `No se encontró un horario para el ${new Date(fecha + 'T00:00:00').toLocaleDateString('es-ES', {day: '2-digit', month:'long', year:'numeric'})}.`;
+                        statusMessage.textContent = `No se encontró un horario guardado para el ${new Date(fecha + 'T00:00:00').toLocaleDateString('es-ES', {day: '2-digit', month:'long', year:'numeric'})}.`;
                     }
                 } catch (error) {
                     console.error('Error al cargar el horario:', error);
-                    statusMessage.textContent = 'Error al conectar. Inténtalo de nuevo.';
+                    statusMessage.textContent = 'Error al conectar con la base de datos. Inténtalo de nuevo.';
                 }
             };
             
@@ -206,14 +199,18 @@
                 let bHour = parseInt(b.split(':')[0], 10);
                 if (aHour < 6) aHour += 24;
                 if (bHour < 6) bHour += 24;
-                return (aHour * 60 + parseInt(a.split(':')[1], 10)) - (bHour * 60 + parseInt(b.split(':')[1], 10));
+                if (aHour < bHour) return -1;
+                if (aHour > bHour) return 1;
+                let aMin = parseInt(a.split(':')[1], 10);
+                let bMin = parseInt(b.split(':')[1], 10);
+                return aMin - bMin;
             };
 
             const renderSchedule = (data) => {
-                const { croupiersEnTabla, horarios, datosRelevos, croupierColors, cronometroStartTime } = data;
+                const { croupiersEnTabla, horarios, datosRelevos, croupierColors } = data;
                 
                 if (!croupiersEnTabla || croupiersEnTabla.length === 0) {
-                     statusMessage.textContent = 'El horario para esta fecha no tiene croupiers.';
+                     statusMessage.textContent = 'El horario para esta fecha no tiene croupiers asignados.';
                      statusMessage.style.display = 'block';
                      return;
                 }
@@ -223,119 +220,70 @@
                 const table = document.createElement('table');
                 table.className = 'tabla';
 
-                // --- Cabecera ---
-                let headerRow = `<thead><tr><th>Croupier</th><th>Crono.</th>`;
+                // --- Cabecera (Horarios) ---
+                const thead = document.createElement('thead');
+                let headerRow = '<tr><th>Croupier</th>';
                 horarios.forEach(hora => {
-                    headerRow += `<th data-horario-header="${hora}">${hora}</th>`;
+                    headerRow += `<th>${hora}</th>`;
                 });
-                headerRow += '</tr></thead>';
-                table.innerHTML = headerRow;
+                headerRow += '</tr>';
+                thead.innerHTML = headerRow;
+                table.appendChild(thead);
 
-                // --- Cuerpo ---
+                // --- Cuerpo de la tabla (Croupiers y Relevos) ---
                 const tbody = document.createElement('tbody');
                 croupiersEnTabla.forEach(croupier => {
                     const tr = document.createElement('tr');
-                    const croupierColor = croupierColors ? croupierColors[croupier] : null;
-
-                    let rowHTML = `<th style="${croupierColor ? `background-color:${croupierColor};` : ''}">${croupier}</th>`;
-                    rowHTML += `
-                        <td>
-                            <div class="cronometro-display-view" data-croupier-crono="${croupier}">
-                                00:00:00
-                            </div>
-                        </td>`;
+                    
+                    const thCroupier = document.createElement('th');
+                    thCroupier.textContent = croupier;
+                    if (croupierColors && croupierColors[croupier]) {
+                        thCroupier.style.backgroundColor = croupierColors[croupier];
+                        // Lógica para determinar si el texto debe ser claro u oscuro
+                        const hex = croupierColors[croupier].replace('#', '');
+                        const r = parseInt(hex.substring(0, 2), 16);
+                        const g = parseInt(hex.substring(2, 4), 16);
+                        const b = parseInt(hex.substring(4, 6), 16);
+                        const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+                        if (luminance < 0.5) {
+                            thCroupier.style.color = 'white';
+                        }
+                    }
+                    tr.appendChild(thCroupier);
 
                     horarios.forEach(hora => {
+                        const td = document.createElement('td');
                         const relevoData = datosRelevos[croupier]?.[hora];
-                        let cellContent = '';
+                        
                         if (relevoData) {
                             const div = document.createElement('div');
                             div.className = 'relevo-cell-view';
                             switch (relevoData.actividad) {
-                                case 'releva': div.style.backgroundColor = relevoData.color; div.textContent = relevoData.mesas.join(' - '); break;
-                                case 'ayudante-pagador': div.classList.add('ayudante-pagador'); div.textContent = 'A. PAGADOR'; break;
-                                case 'descanso': div.classList.add('descanso'); div.textContent = 'DESCANSO'; break;
-                                default: div.style.backgroundColor = '#95a5a6'; div.textContent = 'S/A';
+                                case 'releva':
+                                    div.style.backgroundColor = relevoData.color;
+                                    div.textContent = relevoData.mesas.join(' - ');
+                                    break;
+                                case 'ayudante-pagador':
+                                    div.classList.add('ayudante-pagador');
+                                    div.textContent = 'A. PAGADOR';
+                                    break;
+                                case 'descanso':
+                                    div.classList.add('descanso');
+                                    div.textContent = 'DESCANSO';
+                                    break;
+                                default:
+                                    div.style.backgroundColor = '#95a5a6';
+                                    div.textContent = 'S/A';
                             }
-                            cellContent = div.outerHTML;
+                            td.appendChild(div);
                         }
-                        rowHTML += `<td data-horario-cell="${hora}">${cellContent}</td>`;
+                        tr.appendChild(td);
                     });
-                    tr.innerHTML = rowHTML;
                     tbody.appendChild(tr);
                 });
                 table.appendChild(tbody);
+
                 horarioContainer.appendChild(table);
-
-                // Iniciar cronómetros
-                if (cronometroStartTime) {
-                    Object.entries(cronometroStartTime).forEach(([croupier, startTime]) => {
-                        iniciarCronometro(croupier, startTime);
-                    });
-                }
-                
-                // Actualizar la vista de horarios por primera vez
-                actualizarVisibilidadHorarios();
-            };
-
-            const iniciarCronometro = (croupier, startTime) => {
-                if (!startTime) return;
-                
-                const update = () => {
-                    const elapsed = new Date().getTime() - startTime;
-                    const display = document.querySelector(`[data-croupier-crono="${croupier}"]`);
-                    if (display && elapsed >= 0) {
-                       display.textContent = new Date(elapsed).toISOString().slice(11, 19);
-                       display.classList.add('running');
-                    }
-                };
-                
-                if (cronometroIntervals[croupier]) clearInterval(cronometroIntervals[croupier]);
-                cronometroIntervals[croupier] = setInterval(update, 1000);
-                update();
-            };
-
-            const actualizarVisibilidadHorarios = () => {
-                if (!scheduleDataCache) return;
-                
-                const { horarios } = scheduleDataCache;
-                const now = new Date();
-                const fechaBase = new Date(fechaSelector.value + 'T00:00:00');
-
-                const schedulePoints = horarios.map(hora => {
-                    const [h, m] = hora.split(':').map(Number);
-                    const scheduleDate = new Date(fechaBase);
-                    scheduleDate.setHours(h, m, 0, 0);
-                    if (h < 6) scheduleDate.setDate(scheduleDate.getDate() + 1);
-                    return scheduleDate;
-                });
-
-                let currentIndex = -1;
-                for (let i = 0; i < schedulePoints.length; i++) {
-                    if (schedulePoints[i] <= now) {
-                        currentIndex = i;
-                    } else {
-                        break;
-                    }
-                }
-
-                document.querySelectorAll('[data-horario-header], [data-horario-cell]').forEach(el => {
-                    el.style.display = 'none';
-                });
-
-                if (currentIndex !== -1) {
-                    const currentHorario = horarios[currentIndex];
-                    document.querySelectorAll(`[data-horario-header="${currentHorario}"], [data-horario-cell="${currentHorario}"]`).forEach(el => el.style.display = 'table-cell');
-                    
-                    if (currentIndex > 0) {
-                        const previousHorario = horarios[currentIndex - 1];
-                        document.querySelectorAll(`[data-horario-header="${previousHorario}"], [data-horario-cell="${previousHorario}"]`).forEach(el => el.style.display = 'table-cell');
-                    }
-                } else if (horarios.length > 0) {
-                     // Si aún no ha comenzado el primer horario, mostramos solo el primero
-                     const firstHorario = horarios[0];
-                     document.querySelectorAll(`[data-horario-header="${firstHorario}"], [data-horario-cell="${firstHorario}"]`).forEach(el => el.style.display = 'table-cell');
-                }
             };
 
             // --- Eventos e Inicialización ---
@@ -347,11 +295,9 @@
 
             const today = new Date();
             fechaSelector.value = getISODate(today);
-            loadSchedule(fechaSelector.value);
-            setInterval(actualizarVisibilidadHorarios, 5000); // Actualiza la vista cada 5 segundos
+            loadSchedule(fechaSelector.value); // Cargar el horario del día actual al iniciar
         });
     </script>
 </body>
 </html>
-
 
