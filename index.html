@@ -178,15 +178,16 @@
                 const now = new Date();
                 const { croupiersEnTabla, horarios, datosRelevos, cronometroStartTime } = datosCompletosDelHorario;
                 const scheduleDateStr = fechaSelector.value;
-                
+                const fechaVisible = new Date(scheduleDateStr + 'T00:00:00');
+
                 const sortedHorarios = [...horarios].sort(sortHorarios);
                 const horariosDate = sortedHorarios.map(h => {
                     const [hour, minute] = h.split(':');
-                    const date = new Date(scheduleDateStr + 'T00:00:00Z'); // Usar Z para UTC y evitar problemas de zona horaria
-                    date.setUTCHours(hour, minute, 0, 0); // Trabajar en UTC
+                    const date = new Date(fechaVisible); // Clonar la fecha base
+                    date.setHours(hour, minute, 0, 0);
                     const firstHour = sortedHorarios.length > 0 ? parseInt(sortedHorarios[0].split(':')[0], 10) : 19;
                     if (parseInt(hour, 10) < firstHour && firstHour >= 12) {
-                        date.setUTCDate(date.getUTCDate() + 1);
+                        date.setDate(date.getDate() + 1);
                     }
                     return date;
                 });
