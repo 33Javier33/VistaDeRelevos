@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Visualizador de Horarios</title>
+    <title>Visualizador de Horarios (Tiempo Real)</title>
     <link rel="manifest" href="manifest.json">
     <style>
         :root{--bg-color:#f4f7f9;--surface-color:#fff;--text-color:#34495e;--text-secondary-color:#7f8c8d;--border-color:#ecf0f1;--shadow-color:rgba(0,0,0,.1);--primary-color:#3498db;--primary-hover-color:#2980b9;--disabled-color:#bdc3c7;--timer-color:#2c3e50;--success-color:#2ecc71}
@@ -32,8 +32,6 @@
         #info-horarios{font-weight:700;color:var(--text-secondary-color)}
         .tabla tbody th.timer-active{background-color:var(--success-color) !important;color:#fff}
         .tabla tbody th.timer-active .croupier-timer{color:#fff;font-weight:700}
-
-        /* *** ESTILO PARA EL FOOTER *** */
         footer {
             margin-top: 25px;
             padding-top: 15px;
@@ -47,7 +45,7 @@
 <body>
     <div class="container">
         <div class="header">
-            <h1>Visualizador de Horarios</h1>
+            <h1>Visualizador de Horarios (Tiempo Real)</h1>
             <div id="current-time">00:00:00</div>
             <div class="controls">
                 <label for="fecha-selector">Seleccionar Fecha:</label>
@@ -64,14 +62,12 @@
             <div id="horario-container" class="horario-tabla-container"></div>
         </div>
         
-        <!-- *** FOOTER AÑADIDO *** -->
         <footer>
             CarlosPN Interactive®
         </footer>
     </div>
     
     <script>
-        // TU SCRIPT FUNCIONAL SIN NINGÚN CAMBIO
         document.addEventListener('DOMContentLoaded', () => {
             const URL_DEL_SCRIPT_DE_HORARIOS = 'https://script.google.com/macros/s/AKfycbx6-N3shrPlqQ5rOV2xkDL2cNIIp1lOYVfytv8L5lXC2hw_jqgmeJaiKyK9nrusMwS9vg/exec';
             let datosCompletosDelHorario = null;
@@ -80,9 +76,13 @@
             let timerInterval = null;
             let cronometroIntervals = {};
             let isAutoScrolling = true;
-            let refreshInterval = null;
             const fechaSelector = document.getElementById('fecha-selector');
             
+            // --- INICIO DE LA MODIFICACIÓN ---
+            // Variable global para manejar la conexión SSE
+            let eventSource = null;
+            // --- FIN DE LA MODIFICACIÓN ---
+
             const updateClock = () => { document.getElementById('current-time').textContent = new Date().toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit', second: '2-digit' }); };
             setInterval(updateClock, 1000);
             updateClock();
@@ -94,31 +94,22 @@
                 return `${year}-${month}-${day}`;
             };
             
-            const actualizarDatosDesdeSheets = async () => {
-                if (!datosCompletosDelHorario) return;
-                const fecha = fechaSelector.value;
-                try {
-                    const response = await fetch(`${URL_DEL_SCRIPT_DE_HORARIOS}?action=load&fecha=${fecha}`);
-                    if (!response.ok) return;
-                    const newData = await response.json();
-                    if (newData && newData.found) {
-                        newData.horarios.sort(sortHorarios);
-                        if (JSON.stringify(datosCompletosDelHorario) !== JSON.stringify(newData)) {
-                            datosCompletosDelHorario = newData;
-                            renderCurrentView();
-                        }
-                    }
-                } catch (error) {
-                    console.error("Error en actualización silenciosa:", error);
-                }
-            };
-
             const loadSchedule = async (fecha) => {
                 document.getElementById('status-message').textContent = 'Cargando horario...';
                 document.getElementById('status-message').style.display = 'block';
                 document.getElementById('horario-wrapper').style.display = 'none';
+                
                 if (timerInterval) clearInterval(timerInterval);
-                if (refreshInterval) clearInterval(refreshInterval);
+
+                // --- INICIO DE LA MODIFICACIÓN ---
+                // Si ya existe una conexión SSE, la cerramos antes de crear una nueva.
+                // Esto es importante al cambiar de fecha.
+                if (eventSource) {
+                    eventSource.close();
+                    console.log("Conexión SSE anterior cerrada.");
+                }
+                // --- FIN DE LA MODIFICACIÓN ---
+
                 Object.values(cronometroIntervals).forEach(clearInterval);
                 cronometroIntervals = {};
                 datosCompletosDelHorario = null;
@@ -129,6 +120,7 @@
                     const response = await fetch(`${URL_DEL_SCRIPT_DE_HORARIOS}?action=load&fecha=${fecha}`);
                     if (!response.ok) throw new Error(`Error de red: ${response.statusText}`);
                     const data = await response.json();
+                    
                     if (data && data.found) {
                         document.getElementById('status-message').style.display = 'none';
                         document.getElementById('horario-wrapper').style.display = 'block';
@@ -137,7 +129,40 @@
                         actualizarSistema(); 
                         renderCurrentView(); 
                         timerInterval = setInterval(actualizarSistema, 1000);
-                        refreshInterval = setInterval(actualizarDatosDesdeSheets, 15000);
+                        
+                        // --- INICIO DE LA MODIFICACIÓN: IMPLEMENTACIÓN DE SSE ---
+
+                        // 1. Ya no usamos setInterval para refrescar. La siguiente línea fue eliminada:
+                        // refreshInterval = setInterval(actualizarDatosDesdeSheets, 15000);
+
+                        // 2. Creamos una nueva conexión SSE al servidor con la acción 'subscribe'.
+                        console.log(`Iniciando conexión SSE para la fecha: ${fecha}`);
+                        eventSource = new EventSource(`${URL_DEL_SCRIPT_DE_HORARIOS}?action=subscribe&fecha=${fecha}`);
+
+                        // 3. Este evento se dispara cada vez que el servidor envía datos nuevos.
+                        eventSource.onmessage = (event) => {
+                            console.log("Datos nuevos recibidos del servidor.");
+                            const newData = JSON.parse(event.data);
+
+                            if (newData && newData.found) {
+                                newData.horarios.sort(sortHorarios);
+                                // Comparamos los datos nuevos con los actuales para evitar recargas innecesarias.
+                                if (JSON.stringify(datosCompletosDelHorario) !== JSON.stringify(newData)) {
+                                    console.log("¡Cambios detectados! Actualizando la vista.");
+                                    datosCompletosDelHorario = newData;
+                                    renderCurrentView(); // Redibujamos la tabla con los datos actualizados.
+                                }
+                            }
+                        };
+
+                        // 4. Manejo de errores en la conexión SSE.
+                        eventSource.onerror = (err) => {
+                            console.error("Error en la conexión Server-Sent Events. Se intentará reconectar.", err);
+                            // El navegador intentará reconectar automáticamente.
+                        };
+
+                        // --- FIN DE LA MODIFICACIÓN ---
+
                     } else {
                         document.getElementById('status-message').textContent = `No se encontró un horario para el ${new Date(fecha + 'T00:00:00').toLocaleDateString('es-ES', {day: '2-digit', month:'long', year:'numeric'})}.`;
                     }
@@ -212,6 +237,7 @@
             };
             
             function actualizarSistema() {
+                if (!datosCompletosDelHorario) return; // Añadido para seguridad
                 const now = new Date();
                 const { croupiersEnTabla, horarios, datosRelevos, cronometroStartTime } = datosCompletosDelHorario;
                 const scheduleDateStr = fechaSelector.value;
