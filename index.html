@@ -5,188 +5,35 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Visualizador de Horarios</title>
     <style>
-        /* --- Paleta de Colores y Variables para Temas --- */
-        :root {
-            --bg-color: #f4f7f9;
-            --surface-color: #ffffff;
-            --text-color: #34495e;
-            --text-secondary-color: #7f8c8d;
-            --border-color: #ecf0f1;
-            --shadow-color: rgba(0, 0, 0, 0.1);
-            --primary-color: #3498db;
-            --primary-hover-color: #2980b9;
-            --disabled-color: #bdc3c7;
-            --timer-color: #2c3e50;
-        }
-
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: var(--bg-color);
-            margin: 0;
-            padding: 20px;
-            color: var(--text-color);
-            font-size: 16px;
-        }
-
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-            background-color: var(--surface-color);
-            padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0 4px 6px var(--shadow-color);
-        }
-
-        .header {
-            text-align: center;
-            margin-bottom: 25px;
-            border-bottom: 1px solid var(--border-color);
-            padding-bottom: 20px;
-        }
-
-        h1 {
-            color: var(--primary-color);
-            margin: 0;
-        }
-        
-        .controls {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            gap: 15px;
-            margin-top: 15px;
-            flex-wrap: wrap;
-        }
-        
-        #current-time {
-            font-size: 1.5em;
-            font-weight: bold;
-            color: var(--timer-color);
-            margin-top: 10px;
-        }
-
-        .controls label {
-            font-weight: bold;
-        }
-
-        .controls input[type="date"] {
-            padding: 8px;
-            border: 1px solid var(--border-color);
-            border-radius: 5px;
-            font-size: 1em;
-        }
-        
-        .nav-link {
-            display: inline-block;
-            margin-top: 10px;
-            padding: 8px 16px;
-            background-color: var(--primary-color);
-            color: white;
-            text-decoration: none;
-            border-radius: 5px;
-            font-weight: bold;
-            transition: background-color 0.3s ease;
-        }
-
-        .nav-link:hover {
-            background-color: var(--primary-hover-color);
-        }
-        
-        #status-message {
-            text-align: center;
-            font-size: 1.2em;
-            color: var(--text-secondary-color);
-            padding: 40px 0;
-        }
-
-        .horario-tabla-container {
-            overflow-x: auto;
-        }
-        
-        .tabla {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 20px;
-        }
-
-        .tabla th, .tabla td {
-            border: 1px solid var(--border-color);
-            padding: 8px;
-            text-align: center;
-            font-size: 0.9em;
-            white-space: nowrap;
-        }
-
-        .tabla thead th {
-            background-color: #e9ecef;
-            font-weight: bold;
-            position: sticky;
-            top: 0;
-            z-index: 2;
-        }
-        
-        .tabla tbody th {
-            text-align: left;
-            font-weight: bold;
-            background-color: #f8f9fa;
-            position: sticky;
-            left: 0;
-            z-index: 1;
-        }
-
-        .croupier-timer {
-            font-size: 0.9em;
-            font-weight: normal;
-            color: var(--timer-color);
-            display: block;
-            margin-top: 4px;
-        }
-        
-        .relevo-cell-view {
-            padding: 4px;
-            border-radius: 4px;
-            font-size: 0.85em;
-            font-weight: bold;
-            color: white;
-            line-height: 1.3;
-            display: block;
-            min-height: 20px;
-        }
-        .relevo-cell-view.ayudante-pagador { background-color: #8e44ad; }
-        .relevo-cell-view.descanso { background-color: #f39c12; }
-
-        .horario-nav {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-top: 15px;
-        }
-        .nav-button {
-            background-color: var(--primary-color);
-            color: white;
-            border: none;
-            padding: 10px 20px;
-            border-radius: 5px;
-            font-weight: bold;
-            cursor: pointer;
-            transition: background-color 0.3s ease;
-        }
-        .nav-button:hover {
-            background-color: var(--primary-hover-color);
-        }
-        .nav-button:disabled {
-            background-color: var(--disabled-color);
-            cursor: not-allowed;
-        }
-        #info-horarios {
-            font-weight: bold;
-            color: var(--text-secondary-color);
-        }
-
+        :root{--bg-color:#f4f7f9;--surface-color:#fff;--text-color:#34495e;--text-secondary-color:#7f8c8d;--border-color:#ecf0f1;--shadow-color:rgba(0,0,0,.1);--primary-color:#3498db;--primary-hover-color:#2980b9;--disabled-color:#bdc3c7;--timer-color:#2c3e50}
+        body{font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;background-color:var(--bg-color);margin:0;padding:20px;color:var(--text-color);font-size:16px}
+        .container{max-width:1200px;margin:0 auto;background-color:var(--surface-color);padding:20px;border-radius:8px;box-shadow:0 4px 6px var(--shadow-color)}
+        .header{text-align:center;margin-bottom:25px;border-bottom:1px solid var(--border-color);padding-bottom:20px}
+        h1{color:var(--primary-color);margin:0}
+        .controls{display:flex;justify-content:center;align-items:center;gap:15px;margin-top:15px;flex-wrap:wrap}
+        #current-time{font-size:1.5em;font-weight:700;color:var(--timer-color);margin-top:10px}
+        .controls label{font-weight:700}
+        .controls input[type=date]{padding:8px;border:1px solid var(--border-color);border-radius:5px;font-size:1em}
+        .nav-link{display:inline-block;margin-top:10px;padding:8px 16px;background-color:var(--primary-color);color:#fff;text-decoration:none;border-radius:5px;font-weight:700;transition:background-color .3s ease}
+        .nav-link:hover{background-color:var(--primary-hover-color)}
+        #status-message{text-align:center;font-size:1.2em;color:var(--text-secondary-color);padding:40px 0}
+        .horario-tabla-container{overflow-x:auto}
+        .tabla{width:100%;border-collapse:collapse;margin-top:20px}
+        .tabla td,.tabla th{border:1px solid var(--border-color);padding:8px;text-align:center;font-size:.9em;white-space:nowrap}
+        .tabla thead th{background-color:#e9ecef;font-weight:700;position:sticky;top:0;z-index:2}
+        .tabla tbody th{text-align:left;font-weight:700;background-color:#f8f9fa;position:sticky;left:0;z-index:1}
+        .croupier-timer{font-size:.9em;font-weight:400;color:var(--timer-color);display:block;margin-top:4px}
+        .relevo-cell-view{padding:4px;border-radius:4px;font-size:.85em;font-weight:700;color:#fff;line-height:1.3;display:block;min-height:20px}
+        .relevo-cell-view.ayudante-pagador{background-color:#8e44ad}
+        .relevo-cell-view.descanso{background-color:#f39c12}
+        .horario-nav{display:flex;justify-content:space-between;align-items:center;margin-top:15px}
+        .nav-button{background-color:var(--primary-color);color:#fff;border:none;padding:10px 20px;border-radius:5px;font-weight:700;cursor:pointer;transition:background-color .3s ease}
+        .nav-button:hover{background-color:var(--primary-hover-color)}
+        .nav-button:disabled{background-color:var(--disabled-color);cursor:not-allowed}
+        #info-horarios{font-weight:700;color:var(--text-secondary-color)}
     </style>
 </head>
 <body>
-
     <div class="container">
         <div class="header">
             <h1>Visualizador de Horarios</h1>
@@ -195,11 +42,9 @@
                 <label for="fecha-selector">Seleccionar Fecha:</label>
                 <input type="date" id="fecha-selector">
             </div>
-             <a href="horarios.html" class="nav-link">Ir al Editor de Horarios</a>
+             <a href="horarios.html" id="link-to-editor" class="nav-link">Ir al Editor de Horarios</a>
         </div>
-
-        <div id="status-message">Selecciona una fecha para ver el horario.</div>
-        
+        <div id="status-message">Cargando...</div>
         <div id="horario-wrapper" style="display: none;">
             <div class="horario-nav">
                 <button id="btn-prev" class="nav-button">&lt; Anterior</button>
@@ -209,30 +54,19 @@
             <div id="horario-container" class="horario-tabla-container"></div>
         </div>
     </div>
-
     <script>
         document.addEventListener('DOMContentLoaded', () => {
             const URL_DEL_SCRIPT_DE_HORARIOS = 'https://script.google.com/macros/s/AKfycbx6-N3shrPlqQ5rOV2xkDL2cNIIp1lOYVfytv8L5lXC2hw_jqgmeJaiKyK9nrusMwS9vg/exec';
-
             let datosCompletosDelHorario = null;
             let indiceActual = 0;
-            const COLUMNAS_VISIBLES = 4;
+            const COLUMNAS_VISIBLES = 3;
             let timerInterval = null;
-            let cronometroIntervals = {}; // Necesario para la nueva lógica
-
+            let cronometroIntervals = {};
+            let isAutoScrolling = true; // *** NUEVA VARIABLE DE CONTROL ***
             const fechaSelector = document.getElementById('fecha-selector');
-            const horarioContainer = document.getElementById('horario-container');
-            const statusMessage = document.getElementById('status-message');
-            const horarioWrapper = document.getElementById('horario-wrapper');
-            const btnPrev = document.getElementById('btn-prev');
-            const btnNext = document.getElementById('btn-next');
-            const infoHorarios = document.getElementById('info-horarios');
-            const clockElement = document.getElementById('current-time');
-
-            const updateClock = () => {
-                const now = new Date();
-                clockElement.textContent = now.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-            };
+            const linkToEditor = document.getElementById('link-to-editor');
+            
+            const updateClock = () => { document.getElementById('current-time').textContent = new Date().toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit', second: '2-digit' }); };
             setInterval(updateClock, 1000);
             updateClock();
 
@@ -244,57 +78,49 @@
             };
 
             const loadSchedule = async (fecha) => {
-                statusMessage.textContent = 'Cargando horario...';
-                statusMessage.style.display = 'block';
-                horarioWrapper.style.display = 'none';
-                horarioContainer.innerHTML = '';
+                document.getElementById('status-message').textContent = 'Cargando horario...';
+                document.getElementById('status-message').style.display = 'block';
+                document.getElementById('horario-wrapper').style.display = 'none';
                 if (timerInterval) clearInterval(timerInterval);
-                Object.values(cronometroIntervals).forEach(clearInterval); // Limpiar intervalos individuales
+                Object.values(cronometroIntervals).forEach(clearInterval);
                 cronometroIntervals = {};
                 datosCompletosDelHorario = null;
                 indiceActual = 0;
+                isAutoScrolling = true; // Reactivar auto-scroll al cargar nueva fecha
+                linkToEditor.href = `horarios.html`;
 
                 try {
                     const response = await fetch(`${URL_DEL_SCRIPT_DE_HORARIOS}?action=load&fecha=${fecha}`);
                     if (!response.ok) throw new Error(`Error de red: ${response.statusText}`);
                     const data = await response.json();
-
                     if (data && data.found) {
-                        statusMessage.style.display = 'none';
-                        horarioWrapper.style.display = 'block';
+                        document.getElementById('status-message').style.display = 'none';
+                        document.getElementById('horario-wrapper').style.display = 'block';
                         data.horarios.sort(sortHorarios);
                         datosCompletosDelHorario = data;
+                        actualizarSistema(); 
                         renderCurrentView(); 
-                        timerInterval = setInterval(actualizarSistema, 1000); // Iniciar el actualizador
+                        timerInterval = setInterval(actualizarSistema, 1000);
                     } else {
-                        statusMessage.textContent = `No se encontró un horario para el ${new Date(fecha + 'T00:00:00').toLocaleDateString('es-ES', {day: '2-digit', month:'long', year:'numeric'})}.`;
+                        document.getElementById('status-message').textContent = `No se encontró un horario para el ${new Date(fecha + 'T00:00:00').toLocaleDateString('es-ES', {day: '2-digit', month:'long', year:'numeric'})}.`;
                     }
                 } catch (error) {
                     console.error('Error al cargar el horario:', error);
-                    statusMessage.textContent = 'Error al conectar con la base de datos.';
+                    document.getElementById('status-message').textContent = 'Error al conectar con la base de datos.';
                 }
             };
             
-            const sortHorarios = (a, b) => {
-                let aHour = parseInt(a.split(':')[0], 10);
-                let bHour = parseInt(b.split(':')[0], 10);
-                if (aHour < 6) aHour += 24;
-                if (bHour < 6) bHour += 24;
-                if (aHour < bHour) return -1;
-                if (aHour > bHour) return 1;
-                let aMin = parseInt(a.split(':')[1], 10);
-                let bMin = parseInt(b.split(':')[1], 10);
-                return aMin - bMin;
-            };
+            const sortHorarios = (a, b) => { let aH = parseInt(a.split(':')[0],10),bH=parseInt(b.split(':')[0],10); if(aH<6)aH+=24;if(bH<6)bH+=24;if(aH<bH)return-1;if(aH>bH)return 1;return parseInt(a.split(':')[1],10)-parseInt(b.split(':')[1],10);};
 
             const renderCurrentView = () => {
                 if (!datosCompletosDelHorario) return;
                 const { croupiersEnTabla, horarios, datosRelevos, croupierColors } = datosCompletosDelHorario;
-                horarioContainer.innerHTML = '';
+                const container = document.getElementById('horario-container');
+                container.innerHTML = '';
                 if (!croupiersEnTabla || croupiersEnTabla.length === 0) {
-                     statusMessage.textContent = 'No hay croupiers asignados.';
-                     statusMessage.style.display = 'block';
-                     horarioWrapper.style.display = 'none';
+                     document.getElementById('status-message').textContent = 'No hay croupiers asignados.';
+                     document.getElementById('status-message').style.display = 'block';
+                     document.getElementById('horario-wrapper').style.display = 'none';
                      return;
                 }
                 const horariosVisibles = horarios.slice(indiceActual, indiceActual + COLUMNAS_VISIBLES);
@@ -307,24 +133,23 @@
                 const tbody = document.createElement('tbody');
                 croupiersEnTabla.forEach(croupier => {
                     const tr = document.createElement('tr');
-                    const thCroupier = document.createElement('th');
-                    thCroupier.innerHTML = `${croupier}<span class="croupier-timer" id="timer-${croupier.replace(/\s+/g, '-')}">00:00:00</span>`;
-                     if (croupierColors && croupierColors[croupier]) {
-                        const hex = croupierColors[croupier].replace('#', '');
-                        const r = parseInt(hex.substring(0, 2), 16), g = parseInt(hex.substring(2, 4), 16), b = parseInt(hex.substring(4, 6), 16);
-                        const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
-                        thCroupier.style.backgroundColor = croupierColors[croupier];
-                        thCroupier.style.color = luminance < 0.5 ? 'white' : 'black';
-                        thCroupier.querySelector('.croupier-timer').style.color = luminance < 0.5 ? 'white' : 'var(--timer-color)';
+                    const th = document.createElement('th');
+                    th.innerHTML = `${croupier}<span class="croupier-timer" id="timer-${croupier.replace(/\s+/g, '-')}">00:00:00</span>`;
+                    if (croupierColors && croupierColors[croupier]) {
+                        const c = croupierColors[croupier].replace('#','');
+                        const lum=(0.299*parseInt(c.substring(0,2),16)+0.587*parseInt(c.substring(2,4),16)+0.114*parseInt(c.substring(4,6),16))/255;
+                        th.style.backgroundColor = croupierColors[croupier];
+                        th.style.color = lum < 0.5 ? 'white' : 'black';
+                        th.querySelector('.croupier-timer').style.color = lum < 0.5 ? 'white' : 'var(--timer-color)';
                     }
-                    tr.appendChild(thCroupier);
+                    tr.appendChild(th);
                     horariosVisibles.forEach(hora => {
                         const td = document.createElement('td');
-                        const relevoData = datosRelevos[croupier]?.[hora];
-                        if (relevoData) {
+                        const data = datosRelevos[croupier]?.[hora];
+                        if (data) {
                             const div = document.createElement('div'); div.className = 'relevo-cell-view';
-                            switch (relevoData.actividad) {
-                                case 'releva': div.style.backgroundColor = relevoData.color; div.textContent = relevoData.mesas.join(' - '); break;
+                            switch (data.actividad) {
+                                case 'releva': div.style.backgroundColor = data.color; div.textContent = data.mesas.join(' - '); break;
                                 case 'ayudante-pagador': div.classList.add('ayudante-pagador'); div.textContent = 'A. PAGADOR'; break;
                                 case 'descanso': div.classList.add('descanso'); div.textContent = 'DESCANSO'; break;
                                 default: div.style.backgroundColor = '#95a5a6'; div.textContent = 'S/A';
@@ -336,29 +161,29 @@
                     tbody.appendChild(tr);
                 });
                 table.appendChild(tbody);
-                horarioContainer.appendChild(table);
+                container.appendChild(table);
                 actualizarNavegacion();
             };
             
             const actualizarNavegacion = () => {
                 if (!datosCompletosDelHorario) return;
-                const totalHorarios = datosCompletosDelHorario.horarios.length;
-                const finIndice = Math.min(indiceActual + COLUMNAS_VISIBLES, totalHorarios);
-                btnPrev.disabled = indiceActual === 0;
-                btnNext.disabled = finIndice >= totalHorarios;
-                infoHorarios.textContent = `Mostrando ${indiceActual + 1} - ${finIndice} de ${totalHorarios}`;
+                const total = datosCompletosDelHorario.horarios.length;
+                const fin = Math.min(indiceActual + COLUMNAS_VISIBLES, total);
+                document.getElementById('btn-prev').disabled = indiceActual === 0;
+                document.getElementById('btn-next').disabled = fin >= total;
+                document.getElementById('info-horarios').textContent = `Mostrando ${indiceActual + 1} - ${fin} de ${total}`;
             };
             
-            // *** LÓGICA DE CRONÓMETROS CORREGIDA PARA REFLEJAR EL EDITOR ***
             function actualizarSistema() {
                 const now = new Date();
                 const { croupiersEnTabla, horarios, datosRelevos, cronometroStartTime } = datosCompletosDelHorario;
                 const scheduleDateStr = fechaSelector.value;
                 
-                if (getLocalDateString(now) !== scheduleDateStr) {
+                const fechaBase = new Date(scheduleDateStr + 'T00:00:00');
+                if (now < fechaBase || now > new Date(fechaBase.getTime() + 30 * 60 * 60 * 1000)) {
                     croupiersEnTabla.forEach(croupier => {
-                        const timerEl = document.getElementById(`timer-${croupier.replace(/\s+/g, '-')}`);
-                        if (timerEl) timerEl.textContent = '--:--:--';
+                        detenerCronometro(croupier, false);
+                        actualizarDisplayCrono(croupier, '--:--:--');
                     });
                     return;
                 }
@@ -367,9 +192,9 @@
                 const horariosDate = sortedHorarios.map(h => {
                     const [hour, minute] = h.split(':');
                     const date = new Date(scheduleDateStr + 'T00:00:00');
-                    date.setHours(hour, minute);
-                    const firstHourInSchedule = sortedHorarios.length > 0 ? parseInt(sortedHorarios[0].split(':')[0], 10) : 19;
-                    if (parseInt(hour, 10) < firstHourInSchedule && firstHourInSchedule > 12) {
+                    date.setHours(hour, minute, 0, 0);
+                    const firstHour = sortedHorarios.length > 0 ? parseInt(sortedHorarios[0].split(':')[0], 10) : 19;
+                    if (parseInt(hour, 10) < firstHour && firstHour >= 12) {
                         date.setDate(date.getDate() + 1);
                     }
                     return date;
@@ -382,44 +207,45 @@
                         break;
                     }
                 }
+                
+                // *** LÓGICA DE AUTO-DESPLAZAMIENTO CORREGIDA ***
+                if (isAutoScrolling) {
+                    let newIndice = 0;
+                    if (currentScheduleIndex >= 0) {
+                        newIndice = Math.max(0, currentScheduleIndex);
+                    }
+                    if (newIndice !== indiceActual) {
+                        indiceActual = newIndice;
+                        renderCurrentView();
+                    }
+                }
 
                 croupiersEnTabla.forEach(croupier => {
-                    const isManualTimerRunning = cronometroStartTime && cronometroStartTime.hasOwnProperty(croupier);
-                    const isIntervalRunning = cronometroIntervals.hasOwnProperty(croupier);
+                    const isManual = cronometroStartTime && cronometroStartTime.hasOwnProperty(croupier);
+                    const isRunning = cronometroIntervals.hasOwnProperty(croupier);
 
-                    if (isManualTimerRunning) {
-                        if (!isIntervalRunning) {
-                            iniciarCronometro(croupier, cronometroStartTime[croupier]);
-                        }
+                    if (isManual) {
+                        if (!isRunning) iniciarCronometro(croupier, cronometroStartTime[croupier]);
                     } else {
-                        let lastRealActivity = null;
-                        let lastRealActivityIndex = -1;
+                        let lastActivity = null, lastActivityIdx = -1;
                         for (let i = currentScheduleIndex; i >= 0; i--) {
                             const activity = datosRelevos[croupier]?.[sortedHorarios[i]];
-                            if (activity) {
-                                lastRealActivity = activity;
-                                lastRealActivityIndex = i;
-                                break;
-                            }
+                            if (activity) { lastActivity = activity; lastActivityIdx = i; break; }
                         }
-
-                        const isWorkAction = lastRealActivity && (lastRealActivity.actividad === 'releva' || lastRealActivity.actividad === 'ayudante-pagador');
-
-                        if (isWorkAction) {
-                            if (!isIntervalRunning) {
-                                let workBlockStartIndex = lastRealActivityIndex;
-                                const lastActivityString = JSON.stringify(lastRealActivity);
-                                for (let i = lastRealActivityIndex - 1; i >= 0; i--) {
-                                     if (JSON.stringify(datosRelevos[croupier]?.[sortedHorarios[i]]) === lastActivityString) {
-                                         workBlockStartIndex = i;
+                        const isWork = lastActivity && (lastActivity.actividad === 'releva' || lastActivity.actividad === 'ayudante-pagador');
+                        if (isWork) {
+                            if (!isRunning) {
+                                let startIdx = lastActivityIdx;
+                                const activityStr = JSON.stringify(lastActivity);
+                                for (let i = lastActivityIdx - 1; i >= 0; i--) {
+                                     if (JSON.stringify(datosRelevos[croupier]?.[sortedHorarios[i]]) === activityStr) {
+                                         startIdx = i;
                                      } else { break; }
                                 }
-                                iniciarCronometro(croupier, horariosDate[workBlockStartIndex].getTime());
+                                iniciarCronometro(croupier, horariosDate[startIdx].getTime());
                             }
                         } else {
-                            if (isIntervalRunning) {
-                                detenerCronometro(croupier, true);
-                            }
+                            if (isRunning) detenerCronometro(croupier, true);
                         }
                     }
                 });
@@ -442,32 +268,38 @@
                     clearInterval(cronometroIntervals[croupier]);
                     delete cronometroIntervals[croupier];
                 }
-                if (reset) {
-                    actualizarDisplayCrono(croupier, '00:00:00');
-                }
+                if (reset) actualizarDisplayCrono(croupier, '00:00:00');
             }
 
             function actualizarDisplayCrono(croupier, tiempo) {
                 const timerEl = document.getElementById(`timer-${croupier.replace(/\s+/g, '-')}`);
                 if (timerEl) timerEl.textContent = tiempo;
             }
+            
+            const urlParams = new URLSearchParams(window.location.search);
+            const fechaFromUrl = urlParams.get('fecha');
+
+            if (fechaFromUrl) {
+                fechaSelector.value = fechaFromUrl;
+                loadSchedule(fechaFromUrl);
+            } else {
+                const today = new Date();
+                fechaSelector.value = getLocalDateString(today);
+                loadSchedule(fechaSelector.value);
+            }
 
             fechaSelector.addEventListener('change', () => { if (fechaSelector.value) loadSchedule(fechaSelector.value); });
-            btnNext.addEventListener('click', () => {
+            document.getElementById('btn-next').addEventListener('click', () => {
+                isAutoScrolling = false; // <-- El usuario toma el control
                 if (datosCompletosDelHorario && (indiceActual + COLUMNAS_VISIBLES < datosCompletosDelHorario.horarios.length)) {
                     indiceActual += COLUMNAS_VISIBLES; renderCurrentView();
                 }
             });
-            btnPrev.addEventListener('click', () => {
+            document.getElementById('btn-prev').addEventListener('click', () => {
+                isAutoScrolling = false; // <-- El usuario toma el control
                 if (indiceActual > 0) { indiceActual = Math.max(0, indiceActual - COLUMNAS_VISIBLES); renderCurrentView(); }
             });
-
-            const today = new Date();
-            fechaSelector.value = getLocalDateString(today);
-            loadSchedule(fechaSelector.value);
         });
     </script>
 </body>
 </html>
-
-
