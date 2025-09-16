@@ -4,6 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Visualizador de Horarios</title>
+    <!-- *** 1. ENLACE AL MANIFEST AÑADIDO *** -->
+    <link rel="manifest" href="manifest.json">
     <style>
         :root{--bg-color:#f4f7f9;--surface-color:#fff;--text-color:#34495e;--text-secondary-color:#7f8c8d;--border-color:#ecf0f1;--shadow-color:rgba(0,0,0,.1);--primary-color:#3498db;--primary-hover-color:#2980b9;--disabled-color:#bdc3c7;--timer-color:#2c3e50;--success-color:#2ecc71}
         body{font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;background-color:var(--bg-color);margin:0;padding:20px;color:var(--text-color);font-size:16px}
@@ -14,8 +16,6 @@
         #current-time{font-size:1.5em;font-weight:700;color:var(--timer-color);margin-top:10px}
         .controls label{font-weight:700}
         .controls input[type=date]{padding:8px;border:1px solid var(--border-color);border-radius:5px;font-size:1em}
-        .nav-link{display:inline-block;margin-top:10px;padding:8px 16px;background-color:var(--primary-color);color:#fff;text-decoration:none;border-radius:5px;font-weight:700;transition:background-color .3s ease}
-        .nav-link:hover{background-color:var(--primary-hover-color)}
         #status-message{text-align:center;font-size:1.2em;color:var(--text-secondary-color);padding:40px 0}
         .horario-tabla-container{overflow-x:auto}
         .tabla{width:100%;border-collapse:collapse;margin-top:20px}
@@ -44,7 +44,6 @@
                 <label for="fecha-selector">Seleccionar Fecha:</label>
                 <input type="date" id="fecha-selector">
             </div>
-             <a href="horarios.html" id="link-to-editor" class="nav-link">Ir al Editor de Horarios</a>
         </div>
         <div id="status-message">Cargando...</div>
         <div id="horario-wrapper" style="display: none;">
@@ -65,7 +64,7 @@
             let timerInterval = null;
             let cronometroIntervals = {};
             let isAutoScrolling = true;
-            let refreshInterval = null; // *** NUEVA VARIABLE PARA EL REFRESH ***
+            let refreshInterval = null;
             const fechaSelector = document.getElementById('fecha-selector');
             
             const updateClock = () => { document.getElementById('current-time').textContent = new Date().toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit', second: '2-digit' }); };
@@ -79,26 +78,22 @@
                 return `${year}-${month}-${day}`;
             };
             
-            // *** NUEVA FUNCIÓN DE ACTUALIZACIÓN SILENCIOSA ***
             const actualizarDatosDesdeSheets = async () => {
-                if (!datosCompletosDelHorario) return; // No hacer nada si no hay datos cargados
-
+                if (!datosCompletosDelHorario) return;
                 const fecha = fechaSelector.value;
                 try {
                     const response = await fetch(`${URL_DEL_SCRIPT_DE_HORARIOS}?action=load&fecha=${fecha}`);
-                    if (!response.ok) return; // Fallar silenciosamente
+                    if (!response.ok) return;
                     const newData = await response.json();
-
                     if (newData && newData.found) {
                         newData.horarios.sort(sortHorarios);
-                        // Comparar si los datos han cambiado para evitar parpadeos
                         if (JSON.stringify(datosCompletosDelHorario) !== JSON.stringify(newData)) {
                             datosCompletosDelHorario = newData;
-                            renderCurrentView(); // Redibujar solo si hay cambios
+                            renderCurrentView();
                         }
                     }
                 } catch (error) {
-                    console.error("Error en actualización silenciosa:", error); // Registrar error para depuración
+                    console.error("Error en actualización silenciosa:", error);
                 }
             };
 
@@ -107,7 +102,7 @@
                 document.getElementById('status-message').style.display = 'block';
                 document.getElementById('horario-wrapper').style.display = 'none';
                 if (timerInterval) clearInterval(timerInterval);
-                if (refreshInterval) clearInterval(refreshInterval); // Detener el refresh anterior
+                if (refreshInterval) clearInterval(refreshInterval);
                 Object.values(cronometroIntervals).forEach(clearInterval);
                 cronometroIntervals = {};
                 datosCompletosDelHorario = null;
@@ -126,7 +121,7 @@
                         actualizarSistema(); 
                         renderCurrentView(); 
                         timerInterval = setInterval(actualizarSistema, 1000);
-                        refreshInterval = setInterval(actualizarDatosDesdeSheets, 15000); // Iniciar nuevo refresh
+                        refreshInterval = setInterval(actualizarDatosDesdeSheets, 15000);
                     } else {
                         document.getElementById('status-message').textContent = `No se encontró un horario para el ${new Date(fecha + 'T00:00:00').toLocaleDateString('es-ES', {day: '2-digit', month:'long', year:'numeric'})}.`;
                     }
@@ -160,7 +155,7 @@
                 croupiersEnTabla.forEach(croupier => {
                     const tr = document.createElement('tr');
                     const th = document.createElement('th');
-                    th.innerHTML = `${croupier}<span class="croupier-timer" id="timer-${croupier.replace(/\s+/g, '-')}" data-croupier="${croupier}">00:00:00</span>`;
+                    th.innerHTML = `${croupier}<span class="croupier-timer" id="timer-${croupier.replace(/\s+/g, '-')}">00:00:00</span>`;
                     if (croupierColors && croupierColors[croupier]) {
                         const c = croupierColors[croupier].replace('#','');
                         const lum=(0.299*parseInt(c.substring(0,2),16)+0.587*parseInt(c.substring(2,4),16)+0.114*parseInt(c.substring(4,6),16))/255;
@@ -204,20 +199,12 @@
                 const now = new Date();
                 const { croupiersEnTabla, horarios, datosRelevos, cronometroStartTime } = datosCompletosDelHorario;
                 const scheduleDateStr = fechaSelector.value;
-                
-                const fechaBase = new Date(scheduleDateStr + 'T00:00:00');
-                if (now < fechaBase || now > new Date(fechaBase.getTime() + 30 * 60 * 60 * 1000)) {
-                    croupiersEnTabla.forEach(croupier => {
-                        detenerCronometro(croupier, false);
-                        actualizarDisplayCrono(croupier, '--:--:--');
-                    });
-                    return;
-                }
+                const fechaVisible = new Date(scheduleDateStr + 'T00:00:00');
 
                 const sortedHorarios = [...horarios].sort(sortHorarios);
                 const horariosDate = sortedHorarios.map(h => {
                     const [hour, minute] = h.split(':');
-                    const date = new Date(scheduleDateStr + 'T00:00:00');
+                    const date = new Date(fechaVisible);
                     date.setHours(hour, minute, 0, 0);
                     const firstHour = sortedHorarios.length > 0 ? parseInt(sortedHorarios[0].split(':')[0], 10) : 19;
                     if (parseInt(hour, 10) < firstHour && firstHour >= 12) {
@@ -241,7 +228,7 @@
                 }
 
                 croupiersEnTabla.forEach(croupier => {
-                    const thElement = document.querySelector(`span[data-croupier="${croupier}"]`)?.closest('th');
+                    const thElement = document.querySelector(`#timer-${croupier.replace(/\s+/g, '-')}`)?.closest('th');
                     const isManual = cronometroStartTime && cronometroStartTime.hasOwnProperty(croupier);
                     const isRunning = cronometroIntervals.hasOwnProperty(croupier);
 
@@ -324,6 +311,19 @@
                 if (indiceActual > 0) { indiceActual = Math.max(0, indiceActual - COLUMNAS_VISIBLES); renderCurrentView(); }
             });
         });
+    </script>
+    
+    <!-- *** 2. SCRIPT DEL SERVICE WORKER AÑADIDO *** -->
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./sw.js').then(registration => {
+                    console.log('ServiceWorker registrado con éxito:', registration.scope);
+                }).catch(error => {
+                    console.log('Fallo en el registro de ServiceWorker:', error);
+                });
+            });
+        }
     </script>
 </body>
 </html>
