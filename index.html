@@ -32,6 +32,16 @@
         #info-horarios{font-weight:700;color:var(--text-secondary-color)}
         .tabla tbody th.timer-active{background-color:var(--success-color) !important;color:#fff}
         .tabla tbody th.timer-active .croupier-timer{color:#fff;font-weight:700}
+
+        /* *** ESTILO PARA EL FOOTER *** */
+        footer {
+            margin-top: 25px;
+            padding-top: 15px;
+            text-align: center;
+            font-size: 0.9em;
+            color: var(--text-secondary-color);
+            border-top: 1px solid var(--border-color);
+        }
     </style>
 </head>
 <body>
@@ -53,8 +63,15 @@
             </div>
             <div id="horario-container" class="horario-tabla-container"></div>
         </div>
+        
+        <!-- *** FOOTER AÑADIDO *** -->
+        <footer>
+            CarlosPN Interactive®
+        </footer>
     </div>
+    
     <script>
+        // TU SCRIPT FUNCIONAL SIN NINGÚN CAMBIO
         document.addEventListener('DOMContentLoaded', () => {
             const URL_DEL_SCRIPT_DE_HORARIOS = 'https://script.google.com/macros/s/AKfycbx6-N3shrPlqQ5rOV2xkDL2cNIIp1lOYVfytv8L5lXC2hw_jqgmeJaiKyK9nrusMwS9vg/exec';
             let datosCompletosDelHorario = null;
