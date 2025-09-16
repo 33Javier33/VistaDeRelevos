@@ -2,7 +2,7 @@
   "name": "Visualizador de Horarios",
   "short_name": "Horarios",
   "description": "Visualizador en tiempo real de los horarios y relevos de croupiers.",
-  "start_url": "/vista.html",
+  "start_url": "/index.html",
   "display": "standalone",
   "background_color": "#ffffff",
   "theme_color": "#3498db",
