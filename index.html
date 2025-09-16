@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Visualizador de Horarios</title>
-    <!-- *** 1. ENLACE AL MANIFEST AÑADIDO *** -->
     <link rel="manifest" href="manifest.json">
     <style>
         :root{--bg-color:#f4f7f9;--surface-color:#fff;--text-color:#34495e;--text-secondary-color:#7f8c8d;--border-color:#ecf0f1;--shadow-color:rgba(0,0,0,.1);--primary-color:#3498db;--primary-hover-color:#2980b9;--disabled-color:#bdc3c7;--timer-color:#2c3e50;--success-color:#2ecc71}
@@ -312,8 +311,6 @@
             });
         });
     </script>
-    
-    <!-- *** 2. SCRIPT DEL SERVICE WORKER AÑADIDO *** -->
     <script>
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
