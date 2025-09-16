@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Visualizador de Horarios</title>
     <style>
-        :root{--bg-color:#f4f7f9;--surface-color:#fff;--text-color:#34495e;--text-secondary-color:#7f8c8d;--border-color:#ecf0f1;--shadow-color:rgba(0,0,0,.1);--primary-color:#3498db;--primary-hover-color:#2980b9;--disabled-color:#bdc3c7;--timer-color:#2c3e50}
+        :root{--bg-color:#f4f7f9;--surface-color:#fff;--text-color:#34495e;--text-secondary-color:#7f8c8d;--border-color:#ecf0f1;--shadow-color:rgba(0,0,0,.1);--primary-color:#3498db;--primary-hover-color:#2980b9;--disabled-color:#bdc3c7;--timer-color:#2c3e50;--success-color:#2ecc71}
         body{font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;background-color:var(--bg-color);margin:0;padding:20px;color:var(--text-color);font-size:16px}
         .container{max-width:1200px;margin:0 auto;background-color:var(--surface-color);padding:20px;border-radius:8px;box-shadow:0 4px 6px var(--shadow-color)}
         .header{text-align:center;margin-bottom:25px;border-bottom:1px solid var(--border-color);padding-bottom:20px}
@@ -21,8 +21,8 @@
         .tabla{width:100%;border-collapse:collapse;margin-top:20px}
         .tabla td,.tabla th{border:1px solid var(--border-color);padding:8px;text-align:center;font-size:.9em;white-space:nowrap}
         .tabla thead th{background-color:#e9ecef;font-weight:700;position:sticky;top:0;z-index:2}
-        .tabla tbody th{text-align:left;font-weight:700;background-color:#f8f9fa;position:sticky;left:0;z-index:1}
-        .croupier-timer{font-size:.9em;font-weight:400;color:var(--timer-color);display:block;margin-top:4px}
+        .tabla tbody th{text-align:left;font-weight:700;background-color:#f8f9fa;position:sticky;left:0;z-index:1;transition:background-color .3s ease,color .3s ease}
+        .croupier-timer{font-size:.9em;font-weight:400;color:var(--timer-color);display:block;margin-top:4px;transition:color .3s ease}
         .relevo-cell-view{padding:4px;border-radius:4px;font-size:.85em;font-weight:700;color:#fff;line-height:1.3;display:block;min-height:20px}
         .relevo-cell-view.ayudante-pagador{background-color:#8e44ad}
         .relevo-cell-view.descanso{background-color:#f39c12}
@@ -31,6 +31,8 @@
         .nav-button:hover{background-color:var(--primary-hover-color)}
         .nav-button:disabled{background-color:var(--disabled-color);cursor:not-allowed}
         #info-horarios{font-weight:700;color:var(--text-secondary-color)}
+        .tabla tbody th.timer-active{background-color:var(--success-color) !important;color:#fff}
+        .tabla tbody th.timer-active .croupier-timer{color:#fff;font-weight:700}
     </style>
 </head>
 <body>
@@ -62,9 +64,8 @@
             const COLUMNAS_VISIBLES = 3;
             let timerInterval = null;
             let cronometroIntervals = {};
-            let isAutoScrolling = true; // *** NUEVA VARIABLE DE CONTROL ***
+            let isAutoScrolling = true;
             const fechaSelector = document.getElementById('fecha-selector');
-            const linkToEditor = document.getElementById('link-to-editor');
             
             const updateClock = () => { document.getElementById('current-time').textContent = new Date().toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit', second: '2-digit' }); };
             setInterval(updateClock, 1000);
@@ -86,8 +87,7 @@
                 cronometroIntervals = {};
                 datosCompletosDelHorario = null;
                 indiceActual = 0;
-                isAutoScrolling = true; // Reactivar auto-scroll al cargar nueva fecha
-                linkToEditor.href = `horarios.html`;
+                isAutoScrolling = true;
 
                 try {
                     const response = await fetch(`${URL_DEL_SCRIPT_DE_HORARIOS}?action=load&fecha=${fecha}`);
@@ -179,23 +179,14 @@
                 const { croupiersEnTabla, horarios, datosRelevos, cronometroStartTime } = datosCompletosDelHorario;
                 const scheduleDateStr = fechaSelector.value;
                 
-                const fechaBase = new Date(scheduleDateStr + 'T00:00:00');
-                if (now < fechaBase || now > new Date(fechaBase.getTime() + 30 * 60 * 60 * 1000)) {
-                    croupiersEnTabla.forEach(croupier => {
-                        detenerCronometro(croupier, false);
-                        actualizarDisplayCrono(croupier, '--:--:--');
-                    });
-                    return;
-                }
-
                 const sortedHorarios = [...horarios].sort(sortHorarios);
                 const horariosDate = sortedHorarios.map(h => {
                     const [hour, minute] = h.split(':');
-                    const date = new Date(scheduleDateStr + 'T00:00:00');
-                    date.setHours(hour, minute, 0, 0);
+                    const date = new Date(scheduleDateStr + 'T00:00:00Z'); // Usar Z para UTC y evitar problemas de zona horaria
+                    date.setUTCHours(hour, minute, 0, 0); // Trabajar en UTC
                     const firstHour = sortedHorarios.length > 0 ? parseInt(sortedHorarios[0].split(':')[0], 10) : 19;
                     if (parseInt(hour, 10) < firstHour && firstHour >= 12) {
-                        date.setDate(date.getDate() + 1);
+                        date.setUTCDate(date.getUTCDate() + 1);
                     }
                     return date;
                 });
@@ -208,24 +199,20 @@
                     }
                 }
                 
-                // *** LÓGICA DE AUTO-DESPLAZAMIENTO CORREGIDA ***
                 if (isAutoScrolling) {
                     let newIndice = 0;
-                    if (currentScheduleIndex >= 0) {
-                        newIndice = Math.max(0, currentScheduleIndex);
-                    }
-                    if (newIndice !== indiceActual) {
-                        indiceActual = newIndice;
-                        renderCurrentView();
-                    }
+                    if (currentScheduleIndex >= 0) { newIndice = Math.max(0, currentScheduleIndex); }
+                    if (newIndice !== indiceActual) { indiceActual = newIndice; renderCurrentView(); }
                 }
 
                 croupiersEnTabla.forEach(croupier => {
+                    const thElement = document.querySelector(`#timer-${croupier.replace(/\s+/g, '-')}`)?.closest('th');
                     const isManual = cronometroStartTime && cronometroStartTime.hasOwnProperty(croupier);
                     const isRunning = cronometroIntervals.hasOwnProperty(croupier);
 
                     if (isManual) {
                         if (!isRunning) iniciarCronometro(croupier, cronometroStartTime[croupier]);
+                        if (thElement) thElement.classList.add('timer-active');
                     } else {
                         let lastActivity = null, lastActivityIdx = -1;
                         for (let i = currentScheduleIndex; i >= 0; i--) {
@@ -244,8 +231,10 @@
                                 }
                                 iniciarCronometro(croupier, horariosDate[startIdx].getTime());
                             }
+                            if (thElement) thElement.classList.add('timer-active');
                         } else {
                             if (isRunning) detenerCronometro(croupier, true);
+                            if (thElement) thElement.classList.remove('timer-active');
                         }
                     }
                 });
@@ -290,13 +279,13 @@
 
             fechaSelector.addEventListener('change', () => { if (fechaSelector.value) loadSchedule(fechaSelector.value); });
             document.getElementById('btn-next').addEventListener('click', () => {
-                isAutoScrolling = false; // <-- El usuario toma el control
+                isAutoScrolling = false;
                 if (datosCompletosDelHorario && (indiceActual + COLUMNAS_VISIBLES < datosCompletosDelHorario.horarios.length)) {
                     indiceActual += COLUMNAS_VISIBLES; renderCurrentView();
                 }
             });
             document.getElementById('btn-prev').addEventListener('click', () => {
-                isAutoScrolling = false; // <-- El usuario toma el control
+                isAutoScrolling = false;
                 if (indiceActual > 0) { indiceActual = Math.max(0, indiceActual - COLUMNAS_VISIBLES); renderCurrentView(); }
             });
         });
