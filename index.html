@@ -65,6 +65,7 @@
             let timerInterval = null;
             let cronometroIntervals = {};
             let isAutoScrolling = true;
+            let refreshInterval = null; // *** NUEVA VARIABLE PARA EL REFRESH ***
             const fechaSelector = document.getElementById('fecha-selector');
             
             const updateClock = () => { document.getElementById('current-time').textContent = new Date().toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit', second: '2-digit' }); };
@@ -77,12 +78,36 @@
                 const day = String(date.getDate()).padStart(2, '0');
                 return `${year}-${month}-${day}`;
             };
+            
+            // *** NUEVA FUNCIÓN DE ACTUALIZACIÓN SILENCIOSA ***
+            const actualizarDatosDesdeSheets = async () => {
+                if (!datosCompletosDelHorario) return; // No hacer nada si no hay datos cargados
+
+                const fecha = fechaSelector.value;
+                try {
+                    const response = await fetch(`${URL_DEL_SCRIPT_DE_HORARIOS}?action=load&fecha=${fecha}`);
+                    if (!response.ok) return; // Fallar silenciosamente
+                    const newData = await response.json();
+
+                    if (newData && newData.found) {
+                        newData.horarios.sort(sortHorarios);
+                        // Comparar si los datos han cambiado para evitar parpadeos
+                        if (JSON.stringify(datosCompletosDelHorario) !== JSON.stringify(newData)) {
+                            datosCompletosDelHorario = newData;
+                            renderCurrentView(); // Redibujar solo si hay cambios
+                        }
+                    }
+                } catch (error) {
+                    console.error("Error en actualización silenciosa:", error); // Registrar error para depuración
+                }
+            };
 
             const loadSchedule = async (fecha) => {
                 document.getElementById('status-message').textContent = 'Cargando horario...';
                 document.getElementById('status-message').style.display = 'block';
                 document.getElementById('horario-wrapper').style.display = 'none';
                 if (timerInterval) clearInterval(timerInterval);
+                if (refreshInterval) clearInterval(refreshInterval); // Detener el refresh anterior
                 Object.values(cronometroIntervals).forEach(clearInterval);
                 cronometroIntervals = {};
                 datosCompletosDelHorario = null;
@@ -101,6 +126,7 @@
                         actualizarSistema(); 
                         renderCurrentView(); 
                         timerInterval = setInterval(actualizarSistema, 1000);
+                        refreshInterval = setInterval(actualizarDatosDesdeSheets, 15000); // Iniciar nuevo refresh
                     } else {
                         document.getElementById('status-message').textContent = `No se encontró un horario para el ${new Date(fecha + 'T00:00:00').toLocaleDateString('es-ES', {day: '2-digit', month:'long', year:'numeric'})}.`;
                     }
@@ -134,7 +160,7 @@
                 croupiersEnTabla.forEach(croupier => {
                     const tr = document.createElement('tr');
                     const th = document.createElement('th');
-                    th.innerHTML = `${croupier}<span class="croupier-timer" id="timer-${croupier.replace(/\s+/g, '-')}">00:00:00</span>`;
+                    th.innerHTML = `${croupier}<span class="croupier-timer" id="timer-${croupier.replace(/\s+/g, '-')}" data-croupier="${croupier}">00:00:00</span>`;
                     if (croupierColors && croupierColors[croupier]) {
                         const c = croupierColors[croupier].replace('#','');
                         const lum=(0.299*parseInt(c.substring(0,2),16)+0.587*parseInt(c.substring(2,4),16)+0.114*parseInt(c.substring(4,6),16))/255;
@@ -178,12 +204,20 @@
                 const now = new Date();
                 const { croupiersEnTabla, horarios, datosRelevos, cronometroStartTime } = datosCompletosDelHorario;
                 const scheduleDateStr = fechaSelector.value;
-                const fechaVisible = new Date(scheduleDateStr + 'T00:00:00');
+                
+                const fechaBase = new Date(scheduleDateStr + 'T00:00:00');
+                if (now < fechaBase || now > new Date(fechaBase.getTime() + 30 * 60 * 60 * 1000)) {
+                    croupiersEnTabla.forEach(croupier => {
+                        detenerCronometro(croupier, false);
+                        actualizarDisplayCrono(croupier, '--:--:--');
+                    });
+                    return;
+                }
 
                 const sortedHorarios = [...horarios].sort(sortHorarios);
                 const horariosDate = sortedHorarios.map(h => {
                     const [hour, minute] = h.split(':');
-                    const date = new Date(fechaVisible); // Clonar la fecha base
+                    const date = new Date(scheduleDateStr + 'T00:00:00');
                     date.setHours(hour, minute, 0, 0);
                     const firstHour = sortedHorarios.length > 0 ? parseInt(sortedHorarios[0].split(':')[0], 10) : 19;
                     if (parseInt(hour, 10) < firstHour && firstHour >= 12) {
@@ -207,7 +241,7 @@
                 }
 
                 croupiersEnTabla.forEach(croupier => {
-                    const thElement = document.querySelector(`#timer-${croupier.replace(/\s+/g, '-')}`)?.closest('th');
+                    const thElement = document.querySelector(`span[data-croupier="${croupier}"]`)?.closest('th');
                     const isManual = cronometroStartTime && cronometroStartTime.hasOwnProperty(croupier);
                     const isRunning = cronometroIntervals.hasOwnProperty(croupier);
 
