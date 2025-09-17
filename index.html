@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Visualizador de Horarios (Tiempo Real)</title>
-    <link rel="manifest" href="manifest.json">
     <style>
         :root{--bg-color:#f4f7f9;--surface-color:#fff;--text-color:#34495e;--text-secondary-color:#7f8c8d;--border-color:#ecf0f1;--shadow-color:rgba(0,0,0,.1);--primary-color:#3498db;--primary-hover-color:#2980b9;--disabled-color:#bdc3c7;--timer-color:#2c3e50;--success-color:#2ecc71}
         body{font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;background-color:var(--bg-color);margin:0;padding:20px;color:var(--text-color);font-size:16px}
@@ -69,29 +68,23 @@
     
     <script>
         document.addEventListener('DOMContentLoaded', () => {
-            const URL_DEL_SCRIPT_DE_HORARIOS = 'https://script.google.com/macros/s/AKfycbx6-N3shrPlqQ5rOV2xkDL2cNIIp1lOYVfytv8L5lXC2hw_jqgmeJaiKyK9nrusMwS9vg/exec';
+            const URL_DEL_SCRIPT_DE_HORARIOS = 'https://script.google.com/macros/s/AKfycbw1kBHYt37_X5K7UdBZlJNTgNT2B2P0t4F6uVrCKK_hDgZ7j09cwSzNx5l9CvHwFCTDQg/exec';
+            
             let datosCompletosDelHorario = null;
             let indiceActual = 0;
             const COLUMNAS_VISIBLES = 3;
             let timerInterval = null;
+            let refreshInterval = null;
             let cronometroIntervals = {};
             let isAutoScrolling = true;
             const fechaSelector = document.getElementById('fecha-selector');
             
-            // --- INICIO DE LA MODIFICACIÓN ---
-            // Variable global para manejar la conexión SSE
-            let eventSource = null;
-            // --- FIN DE LA MODIFICACIÓN ---
-
             const updateClock = () => { document.getElementById('current-time').textContent = new Date().toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit', second: '2-digit' }); };
             setInterval(updateClock, 1000);
             updateClock();
 
             const getLocalDateString = (date) => {
-                const year = date.getFullYear();
-                const month = String(date.getMonth() + 1).padStart(2, '0');
-                const day = String(date.getDate()).padStart(2, '0');
-                return `${year}-${month}-${day}`;
+                return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
             };
             
             const loadSchedule = async (fecha) => {
@@ -100,24 +93,15 @@
                 document.getElementById('horario-wrapper').style.display = 'none';
                 
                 if (timerInterval) clearInterval(timerInterval);
-
-                // --- INICIO DE LA MODIFICACIÓN ---
-                // Si ya existe una conexión SSE, la cerramos antes de crear una nueva.
-                // Esto es importante al cambiar de fecha.
-                if (eventSource) {
-                    eventSource.close();
-                    console.log("Conexión SSE anterior cerrada.");
-                }
-                // --- FIN DE LA MODIFICACIÓN ---
+                if (refreshInterval) clearInterval(refreshInterval);
 
                 Object.values(cronometroIntervals).forEach(clearInterval);
                 cronometroIntervals = {};
-                datosCompletosDelHorario = null;
-                indiceActual = 0;
                 isAutoScrolling = true;
 
                 try {
-                    const response = await fetch(`${URL_DEL_SCRIPT_DE_HORARIOS}?action=load&fecha=${fecha}`);
+                    // Se añade un timestamp para evitar problemas de caché del navegador
+                    const response = await fetch(`${URL_DEL_SCRIPT_DE_HORARIOS}?action=load&fecha=${fecha}&t=${new Date().getTime()}`);
                     if (!response.ok) throw new Error(`Error de red: ${response.statusText}`);
                     const data = await response.json();
                     
@@ -129,40 +113,8 @@
                         actualizarSistema(); 
                         renderCurrentView(); 
                         timerInterval = setInterval(actualizarSistema, 1000);
-                        
-                        // --- INICIO DE LA MODIFICACIÓN: IMPLEMENTACIÓN DE SSE ---
-
-                        // 1. Ya no usamos setInterval para refrescar. La siguiente línea fue eliminada:
-                        // refreshInterval = setInterval(actualizarDatosDesdeSheets, 15000);
-
-                        // 2. Creamos una nueva conexión SSE al servidor con la acción 'subscribe'.
-                        console.log(`Iniciando conexión SSE para la fecha: ${fecha}`);
-                        eventSource = new EventSource(`${URL_DEL_SCRIPT_DE_HORARIOS}?action=subscribe&fecha=${fecha}`);
-
-                        // 3. Este evento se dispara cada vez que el servidor envía datos nuevos.
-                        eventSource.onmessage = (event) => {
-                            console.log("Datos nuevos recibidos del servidor.");
-                            const newData = JSON.parse(event.data);
-
-                            if (newData && newData.found) {
-                                newData.horarios.sort(sortHorarios);
-                                // Comparamos los datos nuevos con los actuales para evitar recargas innecesarias.
-                                if (JSON.stringify(datosCompletosDelHorario) !== JSON.stringify(newData)) {
-                                    console.log("¡Cambios detectados! Actualizando la vista.");
-                                    datosCompletosDelHorario = newData;
-                                    renderCurrentView(); // Redibujamos la tabla con los datos actualizados.
-                                }
-                            }
-                        };
-
-                        // 4. Manejo de errores en la conexión SSE.
-                        eventSource.onerror = (err) => {
-                            console.error("Error en la conexión Server-Sent Events. Se intentará reconectar.", err);
-                            // El navegador intentará reconectar automáticamente.
-                        };
-
-                        // --- FIN DE LA MODIFICACIÓN ---
-
+                        // Sistema de actualización simple y robusto
+                        refreshInterval = setInterval(() => loadSchedule(fechaSelector.value), 15000);
                     } else {
                         document.getElementById('status-message').textContent = `No se encontró un horario para el ${new Date(fecha + 'T00:00:00').toLocaleDateString('es-ES', {day: '2-digit', month:'long', year:'numeric'})}.`;
                     }
@@ -180,7 +132,7 @@
                 const container = document.getElementById('horario-container');
                 container.innerHTML = '';
                 if (!croupiersEnTabla || croupiersEnTabla.length === 0) {
-                     document.getElementById('status-message').textContent = 'No hay croupiers asignados.';
+                     document.getElementById('status-message').textContent = 'No hay croupiers asignados en esta fecha.';
                      document.getElementById('status-message').style.display = 'block';
                      document.getElementById('horario-wrapper').style.display = 'none';
                      return;
@@ -196,11 +148,12 @@
                 croupiersEnTabla.forEach(croupier => {
                     const tr = document.createElement('tr');
                     const th = document.createElement('th');
-                    th.innerHTML = `${croupier}<span class="croupier-timer" id="timer-${croupier.replace(/\s+/g, '-')}">00:00:00</span>`;
+                    const croupierId = croupier.replace(/\s+/g, '-');
+                    th.innerHTML = `${croupier}<span class="croupier-timer" id="timer-${croupierId}">00:00:00</span>`;
                     if (croupierColors && croupierColors[croupier]) {
+                        th.style.backgroundColor = croupierColors[croupier];
                         const c = croupierColors[croupier].replace('#','');
                         const lum=(0.299*parseInt(c.substring(0,2),16)+0.587*parseInt(c.substring(2,4),16)+0.114*parseInt(c.substring(4,6),16))/255;
-                        th.style.backgroundColor = croupierColors[croupier];
                         th.style.color = lum < 0.5 ? 'white' : 'black';
                         th.querySelector('.croupier-timer').style.color = lum < 0.5 ? 'white' : 'var(--timer-color)';
                     }
@@ -237,21 +190,17 @@
             };
             
             function actualizarSistema() {
-                if (!datosCompletosDelHorario) return; // Añadido para seguridad
+                if (!datosCompletosDelHorario) return;
                 const now = new Date();
                 const { croupiersEnTabla, horarios, datosRelevos, cronometroStartTime } = datosCompletosDelHorario;
-                const scheduleDateStr = fechaSelector.value;
-                const fechaVisible = new Date(scheduleDateStr + 'T00:00:00');
+                const fechaVisible = new Date(fechaSelector.value + 'T00:00:00');
 
                 const sortedHorarios = [...horarios].sort(sortHorarios);
                 const horariosDate = sortedHorarios.map(h => {
                     const [hour, minute] = h.split(':');
                     const date = new Date(fechaVisible);
                     date.setHours(hour, minute, 0, 0);
-                    const firstHour = sortedHorarios.length > 0 ? parseInt(sortedHorarios[0].split(':')[0], 10) : 19;
-                    if (parseInt(hour, 10) < firstHour && firstHour >= 12) {
-                        date.setDate(date.getDate() + 1);
-                    }
+                    if (parseInt(hour, 10) < 6) { date.setDate(date.getDate() + 1); }
                     return date;
                 });
                 
@@ -265,12 +214,13 @@
                 
                 if (isAutoScrolling) {
                     let newIndice = 0;
-                    if (currentScheduleIndex >= 0) { newIndice = Math.max(0, currentScheduleIndex); }
+                    if (currentScheduleIndex > 0) { newIndice = Math.max(0, currentScheduleIndex -1); }
                     if (newIndice !== indiceActual) { indiceActual = newIndice; renderCurrentView(); }
                 }
 
                 croupiersEnTabla.forEach(croupier => {
-                    const thElement = document.querySelector(`#timer-${croupier.replace(/\s+/g, '-')}`)?.closest('th');
+                    const croupierId = croupier.replace(/\s+/g, '-');
+                    const thElement = document.querySelector(`#timer-${croupierId}`)?.closest('th');
                     const isManual = cronometroStartTime && cronometroStartTime.hasOwnProperty(croupier);
                     const isRunning = cronometroIntervals.hasOwnProperty(croupier);
 
@@ -278,23 +228,14 @@
                         if (!isRunning) iniciarCronometro(croupier, cronometroStartTime[croupier]);
                         if (thElement) thElement.classList.add('timer-active');
                     } else {
-                        let lastActivity = null, lastActivityIdx = -1;
+                        let lastActivity = null, lastActivityTime = null;
                         for (let i = currentScheduleIndex; i >= 0; i--) {
                             const activity = datosRelevos[croupier]?.[sortedHorarios[i]];
-                            if (activity) { lastActivity = activity; lastActivityIdx = i; break; }
+                            if (activity) { lastActivity = activity; lastActivityTime = horariosDate[i].getTime(); break; }
                         }
                         const isWork = lastActivity && (lastActivity.actividad === 'releva' || lastActivity.actividad === 'ayudante-pagador');
                         if (isWork) {
-                            if (!isRunning) {
-                                let startIdx = lastActivityIdx;
-                                const activityStr = JSON.stringify(lastActivity);
-                                for (let i = lastActivityIdx - 1; i >= 0; i--) {
-                                     if (JSON.stringify(datosRelevos[croupier]?.[sortedHorarios[i]]) === activityStr) {
-                                         startIdx = i;
-                                     } else { break; }
-                                }
-                                iniciarCronometro(croupier, horariosDate[startIdx].getTime());
-                            }
+                            if (!isRunning) iniciarCronometro(croupier, lastActivityTime);
                             if (thElement) thElement.classList.add('timer-active');
                         } else {
                             if (isRunning) detenerCronometro(croupier, true);
@@ -325,22 +266,19 @@
             }
 
             function actualizarDisplayCrono(croupier, tiempo) {
-                const timerEl = document.getElementById(`timer-${croupier.replace(/\s+/g, '-')}`);
+                const croupierId = croupier.replace(/\s+/g, '-');
+                const timerEl = document.getElementById(`timer-${croupierId}`);
                 if (timerEl) timerEl.textContent = tiempo;
             }
             
             const urlParams = new URLSearchParams(window.location.search);
             const fechaFromUrl = urlParams.get('fecha');
 
-            if (fechaFromUrl) {
-                fechaSelector.value = fechaFromUrl;
-                loadSchedule(fechaFromUrl);
-            } else {
-                const today = new Date();
-                fechaSelector.value = getLocalDateString(today);
-                loadSchedule(fechaSelector.value);
-            }
-
+            const today = new Date();
+            const defaultDate = fechaFromUrl || getLocalDateString(today);
+            fechaSelector.value = defaultDate;
+            loadSchedule(defaultDate);
+            
             fechaSelector.addEventListener('change', () => { if (fechaSelector.value) loadSchedule(fechaSelector.value); });
             document.getElementById('btn-next').addEventListener('click', () => {
                 isAutoScrolling = false;
@@ -354,16 +292,7 @@
             });
         });
     </script>
-    <script>
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
-                navigator.serviceWorker.register('./sw.js').then(registration => {
-                    console.log('ServiceWorker registrado con éxito:', registration.scope);
-                }).catch(error => {
-                    console.log('Fallo en el registro de ServiceWorker:', error);
-                });
-            });
-        }
-    </script>
 </body>
 </html>
+
+
