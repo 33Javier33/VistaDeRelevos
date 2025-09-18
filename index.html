@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Visualizador de Horarios (Tiempo Real)</title>
     <style>
-        :root{--bg-color:#f4f7f9;--surface-color:#fff;--text-color:#34495e;--text-secondary-color:#7f8c8d;--border-color:#ecf0f1;--shadow-color:rgba(0,0,0,.1);--primary-color:#3498db;--primary-hover-color:#2980b9;--disabled-color:#bdc3c7;--timer-color:#2c3e50;--success-color:#2ecc71}
+        :root{--bg-color:#f4f7f9;--surface-color:#fff;--text-color:#34495e;--text-secondary-color:#7f8c8d;--border-color:#ecf0f1;--shadow-color:rgba(0,0,0,.1);--primary-color:#3498db;--primary-hover-color:#2980b9;--disabled-color:#bdc3c7;--timer-color:#2c3e50;--success-color:#2ecc71;--danger-color:#e74c3c;--danger-hover-color:#c0392b;}
         body{font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;background-color:var(--bg-color);margin:0;padding:20px;color:var(--text-color);font-size:16px}
         .container{max-width:1200px;margin:0 auto;background-color:var(--surface-color);padding:20px;border-radius:8px;box-shadow:0 4px 6px var(--shadow-color)}
         .header{text-align:center;margin-bottom:25px;border-bottom:1px solid var(--border-color);padding-bottom:20px}
@@ -31,6 +31,26 @@
         #info-horarios{font-weight:700;color:var(--text-secondary-color)}
         .tabla tbody th.timer-active{background-color:var(--success-color) !important;color:#fff}
         .tabla tbody th.timer-active .croupier-timer{color:#fff;font-weight:700}
+        
+        /* ESTILOS AÑADIDOS PARA LA FILA PULSANTE */
+        @keyframes pulse {
+            0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(231, 76, 60, 0.7); }
+            70% { transform: scale(1.02); box-shadow: 0 0 10px 20px rgba(231, 76, 60, 0); }
+            100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(231, 76, 60, 0); }
+        }
+        .tabla tr.salida-warning {
+            background-color: var(--danger-color) !important;
+            animation: pulse 1.5s infinite;
+            color: white;
+        }
+        .tabla tr.salida-warning th, .tabla tr.salida-warning td {
+            background-color: transparent !important;
+            color: white !important;
+        }
+        .tabla tr.salida-warning .croupier-timer {
+            color: white !important;
+        }
+
         footer {
             margin-top: 25px;
             padding-top: 15px;
@@ -87,63 +107,43 @@
                 return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
             };
             
-            // --- NUEVA FUNCIÓN PARA ACTUALIZACIÓN SILENCIOSA ---
-            const actualizarDatosEnSegundoPlano = async () => {
-                const fecha = fechaSelector.value;
-                if (!fecha) return;
-
-                try {
-                    const response = await fetch(`${URL_DEL_SCRIPT_DE_HORARIOS}?action=load&fecha=${fecha}&t=${new Date().getTime()}`);
-                    if (!response.ok) {
-                        console.error(`Error de red al actualizar: ${response.statusText}`);
-                        return;
-                    }
-                    const newData = await response.json();
-
-                    // Comparamos los datos nuevos con los actuales para evitar recargas innecesarias.
-                    if (JSON.stringify(newData) !== JSON.stringify(datosCompletosDelHorario)) {
-                        console.log("Cambios detectados. Actualizando la vista...");
-                        newData.horarios.sort(sortHorarios);
-                        datosCompletosDelHorario = newData;
-                        renderCurrentView(); // Redibujamos la tabla con los datos actualizados.
-                        actualizarSistema(); // Recalculamos los timers
-                    } else {
-                        // console.log("Sin cambios detectados.");
-                    }
-                } catch (error) {
-                    console.error("Fallo la actualización en segundo plano:", error);
+            const loadSchedule = async (fecha, isInitialLoad = true) => {
+                if (isInitialLoad) {
+                    document.getElementById('status-message').textContent = 'Cargando horario...';
+                    document.getElementById('status-message').style.display = 'block';
+                    document.getElementById('horario-wrapper').style.display = 'none';
                 }
-            };
-
-            const loadSchedule = async (fecha) => {
-                document.getElementById('status-message').textContent = 'Cargando horario...';
-                document.getElementById('status-message').style.display = 'block';
-                document.getElementById('horario-wrapper').style.display = 'none';
                 
-                if (timerInterval) clearInterval(timerInterval);
-                if (refreshInterval) clearInterval(refreshInterval);
-
-                Object.values(cronometroIntervals).forEach(clearInterval);
-                cronometroIntervals = {};
-                isAutoScrolling = true;
+                if (isInitialLoad) {
+                    if (timerInterval) clearInterval(timerInterval);
+                    if (refreshInterval) clearInterval(refreshInterval);
+                    Object.values(cronometroIntervals).forEach(clearInterval);
+                    cronometroIntervals = {};
+                    isAutoScrolling = true;
+                }
 
                 try {
                     const response = await fetch(`${URL_DEL_SCRIPT_DE_HORARIOS}?action=load&fecha=${fecha}&t=${new Date().getTime()}`);
                     if (!response.ok) throw new Error(`Error de red: ${response.statusText}`);
                     const data = await response.json();
                     
+                    datosCompletosDelHorario = data;
+
                     if (data && data.found) {
                         document.getElementById('status-message').style.display = 'none';
                         document.getElementById('horario-wrapper').style.display = 'block';
                         data.horarios.sort(sortHorarios);
-                        datosCompletosDelHorario = data;
-                        actualizarSistema(); 
                         renderCurrentView(); 
-                        timerInterval = setInterval(actualizarSistema, 1000);
-                        // Usamos la nueva función para actualizaciones silenciosas
-                        refreshInterval = setInterval(actualizarDatosEnSegundoPlano, 15000);
+                        
+                        if (isInitialLoad) {
+                            actualizarSistema(); 
+                            timerInterval = setInterval(actualizarSistema, 1000);
+                            refreshInterval = setInterval(() => loadSchedule(fechaSelector.value, false), 15000);
+                        }
                     } else {
                         document.getElementById('status-message').textContent = `No se encontró un horario para el ${new Date(fecha + 'T00:00:00').toLocaleDateString('es-ES', {day: '2-digit', month:'long', year:'numeric'})}.`;
+                        document.getElementById('status-message').style.display = 'block';
+                        document.getElementById('horario-wrapper').style.display = 'none';
                     }
                 } catch (error) {
                     console.error('Error al cargar el horario:', error);
@@ -154,16 +154,18 @@
             const sortHorarios = (a, b) => { let aH = parseInt(a.split(':')[0],10),bH=parseInt(b.split(':')[0],10); if(aH<6)aH+=24;if(bH<6)bH+=24;if(aH<bH)return-1;if(aH>bH)return 1;return parseInt(a.split(':')[1],10)-parseInt(b.split(':')[1],10);};
 
             const renderCurrentView = () => {
-                if (!datosCompletosDelHorario) return;
+                if (!datosCompletosDelHorario || !datosCompletosDelHorario.found) {
+                    const fecha = fechaSelector.value;
+                    document.getElementById('status-message').textContent = `No hay croupiers asignados para el ${new Date(fecha + 'T00:00:00').toLocaleDateString('es-ES', {day: '2-digit', month:'long', year:'numeric'})}.`;
+                    document.getElementById('status-message').style.display = 'block';
+                    document.getElementById('horario-wrapper').style.display = 'none';
+                    return;
+                }
+
                 const { croupiersEnTabla, horarios, datosRelevos, croupierColors } = datosCompletosDelHorario;
                 const container = document.getElementById('horario-container');
                 container.innerHTML = '';
-                if (!croupiersEnTabla || croupiersEnTabla.length === 0) {
-                     document.getElementById('status-message').textContent = 'No hay croupiers asignados en esta fecha.';
-                     document.getElementById('status-message').style.display = 'block';
-                     document.getElementById('horario-wrapper').style.display = 'none';
-                     return;
-                }
+                
                 const horariosVisibles = horarios.slice(indiceActual, indiceActual + COLUMNAS_VISIBLES);
                 const table = document.createElement('table'); table.className = 'tabla';
                 const thead = document.createElement('thead');
@@ -174,8 +176,9 @@
                 const tbody = document.createElement('tbody');
                 croupiersEnTabla.forEach(croupier => {
                     const tr = document.createElement('tr');
-                    const th = document.createElement('th');
                     const croupierId = croupier.replace(/\s+/g, '-');
+                    tr.id = `row-${croupierId}`; // ID para la fila
+                    const th = document.createElement('th');
                     th.innerHTML = `${croupier}<span class="croupier-timer" id="timer-${croupierId}">00:00:00</span>`;
                     if (croupierColors && croupierColors[croupier]) {
                         th.style.backgroundColor = croupierColors[croupier];
@@ -205,10 +208,11 @@
                 table.appendChild(tbody);
                 container.appendChild(table);
                 actualizarNavegacion();
+                actualizarSistema();
             };
             
             const actualizarNavegacion = () => {
-                if (!datosCompletosDelHorario) return;
+                if (!datosCompletosDelHorario || !datosCompletosDelHorario.found) return;
                 const total = datosCompletosDelHorario.horarios.length;
                 const fin = Math.min(indiceActual + COLUMNAS_VISIBLES, total);
                 document.getElementById('btn-prev').disabled = indiceActual === 0;
@@ -217,9 +221,9 @@
             };
             
             function actualizarSistema() {
-                if (!datosCompletosDelHorario) return;
+                if (!datosCompletosDelHorario || !datosCompletosDelHorario.found) return;
                 const now = new Date();
-                const { croupiersEnTabla, horarios, datosRelevos, cronometroStartTime } = datosCompletosDelHorario;
+                const { croupiersEnTabla, horarios, datosRelevos, cronometroStartTime, horasSalida } = datosCompletosDelHorario;
                 const fechaVisible = new Date(fechaSelector.value + 'T00:00:00');
 
                 const sortedHorarios = [...horarios].sort(sortHorarios);
@@ -248,6 +252,7 @@
                 croupiersEnTabla.forEach(croupier => {
                     const croupierId = croupier.replace(/\s+/g, '-');
                     const thElement = document.querySelector(`#timer-${croupierId}`)?.closest('th');
+                    const rowElement = document.getElementById(`row-${croupierId}`); // Selecciona la fila completa
                     const isManual = cronometroStartTime && cronometroStartTime.hasOwnProperty(croupier);
                     const isRunning = cronometroIntervals.hasOwnProperty(croupier);
 
@@ -269,6 +274,19 @@
                             if (thElement) thElement.classList.remove('timer-active');
                         }
                     }
+
+                    // LÓGICA DE LA FILA PULSANTE AÑADIDA AQUÍ
+                    const salidaTime = horasSalida ? horasSalida[croupier] : null;
+                    let shouldWarn = false;
+                    if (salidaTime) {
+                        const [h, m] = salidaTime.split(':').map(Number);
+                        const salidaDate = new Date(fechaVisible);
+                        salidaDate.setHours(h, m, 0, 0);
+                        if (h < 6) salidaDate.setDate(salidaDate.getDate() + 1);
+                        const diffMinutes = (salidaDate.getTime() - now.getTime()) / 60000;
+                        shouldWarn = diffMinutes > 0 && diffMinutes <= 20;
+                    }
+                    if(rowElement) rowElement.classList.toggle('salida-warning', shouldWarn);
                 });
             }
 
@@ -304,9 +322,9 @@
             const today = new Date();
             const defaultDate = fechaFromUrl || getLocalDateString(today);
             fechaSelector.value = defaultDate;
-            loadSchedule(defaultDate);
+            loadSchedule(defaultDate, true);
             
-            fechaSelector.addEventListener('change', () => { if (fechaSelector.value) loadSchedule(fechaSelector.value); });
+            fechaSelector.addEventListener('change', () => { if (fechaSelector.value) loadSchedule(fechaSelector.value, true); });
             document.getElementById('btn-next').addEventListener('click', () => {
                 isAutoScrolling = false;
                 if (datosCompletosDelHorario && (indiceActual + COLUMNAS_VISIBLES < datosCompletosDelHorario.horarios.length)) {
