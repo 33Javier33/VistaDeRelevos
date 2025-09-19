@@ -4,8 +4,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Visualizador de Horarios (Tiempo Real)</title>
+    <!-- Enlace al Manifest para la PWA -->
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#3498db">
     <style>
-        :root{--bg-color:#f4f7f9;--surface-color:#fff;--text-color:#34495e;--text-secondary-color:#7f8c8d;--border-color:#ecf0f1;--shadow-color:rgba(0,0,0,.1);--primary-color:#3498db;--primary-hover-color:#2980b9;--disabled-color:#bdc3c7;--timer-color:#2c3e50;--success-color:#2ecc71;--danger-color:#e74c3c;--danger-hover-color:#c0392b;}
+        :root{--bg-color:#f4f7f9;--surface-color:#fff;--text-color:#34495e;--text-secondary-color:#7f8c8d;--border-color:#ecf0f1;--shadow-color:rgba(0,0,0,.1);--primary-color:#3498db;--primary-hover-color:#2980b9;--disabled-color:#bdc3c7;--timer-color:#2c3e50;--success-color:#2ecc71;--danger-color:#e74c3c;--danger-hover-color:#c0392b;--notification-btn-bg:#1abc9c;--notification-btn-hover:#16a085;}
         body{font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;background-color:var(--bg-color);margin:0;padding:20px;color:var(--text-color);font-size:16px}
         .container{max-width:1200px;margin:0 auto;background-color:var(--surface-color);padding:20px;border-radius:8px;box-shadow:0 4px 6px var(--shadow-color)}
         .header{text-align:center;margin-bottom:25px;border-bottom:1px solid var(--border-color);padding-bottom:20px}
@@ -58,6 +61,20 @@
             color: var(--text-secondary-color);
             border-top: 1px solid var(--border-color);
         }
+        #btn-notifications {
+            background-color: var(--notification-btn-bg);
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+            margin-top: 10px;
+            transition: background-color 0.3s;
+        }
+        #btn-notifications:hover {
+            background-color: var(--notification-btn-hover);
+        }
     </style>
 </head>
 <body>
@@ -81,7 +98,8 @@
         </div>
         
         <footer>
-            CarlosPN Interactive®
+             <button id="btn-notifications">🔔 Activar Notificaciones</button>
+             <p style="margin-top: 15px;">CarlosPN Interactive®</p>
         </footer>
     </div>
     
@@ -89,6 +107,7 @@
         document.addEventListener('DOMContentLoaded', () => {
             const URL_DEL_SCRIPT_DE_HORARIOS = 'https://script.google.com/macros/s/AKfycbw1kBHYt37_X5K7UdBZlJNTgNT2B2P0t4F6uVrCKK_hDgZ7j09cwSzNx5l9CvHwFCTDQg/exec';
             
+            // LÓGICA DE HORARIOS (SIN CAMBIOS)
             let datosCompletosDelHorario = null;
             let indiceActual = 0;
             const COLUMNAS_VISIBLES = 3;
@@ -97,35 +116,27 @@
             let cronometroIntervals = {};
             let isAutoScrolling = true;
             const fechaSelector = document.getElementById('fecha-selector');
-            
             const updateClock = () => { document.getElementById('current-time').textContent = new Date().toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit', second: '2-digit' }); };
             setInterval(updateClock, 1000);
             updateClock();
-
             const getLocalDateString = (date) => {
                 return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
             };
-            
-            // *** INICIO DE LA MODIFICACIÓN PARA ACTUALIZACIÓN SILENCIOSA ***
-
             const loadSchedule = async (fecha, isInitialLoad = true) => {
                 if (isInitialLoad) {
                     document.getElementById('status-message').textContent = 'Cargando horario...';
                     document.getElementById('status-message').style.display = 'block';
                     document.getElementById('horario-wrapper').style.display = 'none';
-                    
                     if (timerInterval) clearInterval(timerInterval);
                     if (refreshInterval) clearInterval(refreshInterval);
                     Object.values(cronometroIntervals).forEach(clearInterval);
                     cronometroIntervals = {};
                     isAutoScrolling = true;
                 }
-
                 try {
                     const response = await fetch(`${URL_DEL_SCRIPT_DE_HORARIOS}?action=load&fecha=${fecha}&t=${new Date().getTime()}`);
                     if (!response.ok) throw new Error(`Error de red: ${response.statusText}`);
                     const newData = await response.json();
-                    
                     if (isInitialLoad) {
                         datosCompletosDelHorario = newData;
                         if (newData && newData.found) {
@@ -133,7 +144,6 @@
                             document.getElementById('horario-wrapper').style.display = 'block';
                             newData.horarios.sort(sortHorarios);
                             renderCurrentView(); 
-                            
                             actualizarSistema(); 
                             timerInterval = setInterval(actualizarSistema, 1000);
                             refreshInterval = setInterval(() => loadSchedule(fechaSelector.value, false), 15000);
@@ -141,59 +151,43 @@
                             handleNoSchedule(fecha);
                         }
                     } else if (newData && newData.found) {
-                        // Es una actualización, no un carga inicial. Llamamos a la función silenciosa.
                         updateScheduleSilently(newData);
                     }
-
                 } catch (error) {
                     console.error('Error al cargar el horario:', error);
                     document.getElementById('status-message').textContent = 'Error al conectar con la base de datos.';
                 }
             };
-            
             const handleNoSchedule = (fecha) => {
                  document.getElementById('status-message').textContent = `No se encontró un horario para el ${new Date(fecha + 'T00:00:00').toLocaleTimeString('es-ES', {day: '2-digit', month:'long', year:'numeric'})}.`;
                  document.getElementById('status-message').style.display = 'block';
                  document.getElementById('horario-wrapper').style.display = 'none';
             }
-            
-            // Nueva función para actualizar la tabla sin parpadeos
             const updateScheduleSilently = (newData) => {
-                // Comprobamos si la estructura ha cambiado (croupiers u horarios)
                 const structureChanged = 
                     JSON.stringify(datosCompletosDelHorario.croupiersEnTabla) !== JSON.stringify(newData.croupiersEnTabla) ||
                     JSON.stringify(datosCompletosDelHorario.horarios) !== JSON.stringify(newData.horarios);
-
-                datosCompletosDelHorario = newData; // Actualizamos los datos globales primero
+                datosCompletosDelHorario = newData;
                 datosCompletosDelHorario.horarios.sort(sortHorarios);
-
                 if (structureChanged) {
-                    // Si la estructura cambió, no hay más remedio que redibujar todo
                     renderCurrentView();
                 } else {
-                    // Si la estructura es la misma, actualizamos solo las celdas necesarias
                     const { croupiersEnTabla, horarios, datosRelevos, croupierColors } = datosCompletosDelHorario;
                     const horariosVisibles = horarios.slice(indiceActual, indiceActual + COLUMNAS_VISIBLES);
-
                     croupiersEnTabla.forEach((croupier, rowIndex) => {
                         const croupierId = croupier.replace(/\s+/g, '-');
                         const row = document.getElementById(`row-${croupierId}`);
                         if (!row) return;
-
-                        // Actualizar celdas de relevos
                         horariosVisibles.forEach((hora, colIndex) => {
-                            const td = row.cells[colIndex + 1]; // +1 para saltar la celda del nombre
+                            const td = row.cells[colIndex + 1];
                             if (!td) return;
-                            
                             const data = datosRelevos[croupier]?.[hora];
                             const currentContent = td.innerHTML;
                             let newContent = '';
-
                             if (data) {
                                 const div = crearTarjetaRelevo(data);
                                 newContent = div.outerHTML;
                             }
-                            
                             if (currentContent !== newContent) {
                                 td.innerHTML = newContent;
                             }
@@ -201,8 +195,6 @@
                     });
                 }
             };
-            
-            // Helper para crear la tarjeta de relevo (extraído para reutilización)
             const crearTarjetaRelevo = (data) => {
                 const div = document.createElement('div');
                 div.className = 'relevo-cell-view';
@@ -214,21 +206,15 @@
                 }
                 return div;
             };
-
-            // *** FIN DE LA MODIFICACIÓN ***
-
             const sortHorarios = (a, b) => { let aH = parseInt(a.split(':')[0],10),bH=parseInt(b.split(':')[0],10); if(aH<6)aH+=24;if(bH<6)bH+=24;if(aH<bH)return-1;if(aH>bH)return 1;return parseInt(a.split(':')[1],10)-parseInt(b.split(':')[1],10);};
-
             const renderCurrentView = () => {
                 if (!datosCompletosDelHorario || !datosCompletosDelHorario.found || datosCompletosDelHorario.croupiersEnTabla.length === 0) {
                     handleNoSchedule(fechaSelector.value);
                     return;
                 }
-
                 const { croupiersEnTabla, horarios, datosRelevos, croupierColors } = datosCompletosDelHorario;
                 const container = document.getElementById('horario-container');
                 container.innerHTML = '';
-                
                 const horariosVisibles = horarios.slice(indiceActual, indiceActual + COLUMNAS_VISIBLES);
                 const table = document.createElement('table'); table.className = 'tabla';
                 const thead = document.createElement('thead');
@@ -266,7 +252,6 @@
                 actualizarNavegacion();
                 actualizarSistema();
             };
-            
             const actualizarNavegacion = () => {
                 if (!datosCompletosDelHorario || !datosCompletosDelHorario.found) return;
                 const total = datosCompletosDelHorario.horarios.length;
@@ -275,13 +260,11 @@
                 document.getElementById('btn-next').disabled = fin >= total;
                 document.getElementById('info-horarios').textContent = `Mostrando ${indiceActual + 1} - ${fin} de ${total}`;
             };
-            
             function actualizarSistema() {
                 if (!datosCompletosDelHorario || !datosCompletosDelHorario.found) return;
                 const now = new Date();
                 const { croupiersEnTabla, horarios, datosRelevos, cronometroStartTime, horasSalida } = datosCompletosDelHorario;
                 const fechaVisible = new Date(fechaSelector.value + 'T00:00:00');
-
                 const sortedHorarios = [...horarios].sort(sortHorarios);
                 const horariosDate = sortedHorarios.map(h => {
                     const [hour, minute] = h.split(':');
@@ -290,7 +273,6 @@
                     if (parseInt(hour, 10) < 6) { date.setDate(date.getDate() + 1); }
                     return date;
                 });
-                
                 let currentScheduleIndex = -1;
                 for (let i = horariosDate.length - 1; i >= 0; i--) {
                     if (now >= horariosDate[i]) {
@@ -298,20 +280,17 @@
                         break;
                     }
                 }
-                
                 if (isAutoScrolling) {
                     let newIndice = 0;
                     if (currentScheduleIndex > 0) { newIndice = Math.max(0, currentScheduleIndex -1); }
                     if (newIndice !== indiceActual) { indiceActual = newIndice; renderCurrentView(); }
                 }
-
                 croupiersEnTabla.forEach(croupier => {
                     const croupierId = croupier.replace(/\s+/g, '-');
                     const thElement = document.querySelector(`#timer-${croupierId}`)?.closest('th');
                     const rowElement = document.getElementById(`row-${croupierId}`);
                     const isManual = cronometroStartTime && cronometroStartTime.hasOwnProperty(croupier);
                     const isRunning = cronometroIntervals.hasOwnProperty(croupier);
-
                     if (isManual) {
                         if (!isRunning) iniciarCronometro(croupier, cronometroStartTime[croupier]);
                         if (thElement) thElement.classList.add('timer-active');
@@ -330,7 +309,6 @@
                             if (thElement) thElement.classList.remove('timer-active');
                         }
                     }
-
                     const salidaTime = horasSalida ? horasSalida[croupier] : null;
                     let shouldWarn = false;
                     if (salidaTime) {
@@ -344,7 +322,6 @@
                     if(rowElement) rowElement.classList.toggle('salida-warning', shouldWarn);
                 });
             }
-
             function iniciarCronometro(croupier, startTime) {
                 if (!startTime || cronometroIntervals[croupier]) return;
                 const update = () => {
@@ -356,7 +333,6 @@
                 cronometroIntervals[croupier] = setInterval(update, 1000);
                 update();
             }
-
             function detenerCronometro(croupier, reset = false) {
                 if (cronometroIntervals[croupier]) {
                     clearInterval(cronometroIntervals[croupier]);
@@ -364,21 +340,17 @@
                 }
                 if (reset) actualizarDisplayCrono(croupier, '00:00:00');
             }
-
             function actualizarDisplayCrono(croupier, tiempo) {
                 const croupierId = croupier.replace(/\s+/g, '-');
                 const timerEl = document.getElementById(`timer-${croupierId}`);
                 if (timerEl) timerEl.textContent = tiempo;
             }
-            
             const urlParams = new URLSearchParams(window.location.search);
             const fechaFromUrl = urlParams.get('fecha');
-
             const today = new Date();
             const defaultDate = fechaFromUrl || getLocalDateString(today);
             fechaSelector.value = defaultDate;
             loadSchedule(defaultDate, true);
-            
             fechaSelector.addEventListener('change', () => { if (fechaSelector.value) loadSchedule(fechaSelector.value, true); });
             document.getElementById('btn-next').addEventListener('click', () => {
                 isAutoScrolling = false;
@@ -390,6 +362,89 @@
                 isAutoScrolling = false;
                 if (indiceActual > 0) { indiceActual = Math.max(0, indiceActual - COLUMNAS_VISIBLES); renderCurrentView(); }
             });
+
+            // --- INICIO: LÓGICA DE NOTIFICACIONES PUSH ---
+            const VAPID_PUBLIC_KEY = 'BCur0YnUTn7l2Nq_iUF3JwyaGSHiv4gexbkv84svB42Y4N1gqKAwKNEUj5JKSk12SmEv8FMR46ISJmP8y4bCzuc';
+
+            function urlBase64ToUint8Array(base64String) {
+                const padding = '='.repeat((4 - base64String.length % 4) % 4);
+                const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+                const rawData = window.atob(base64);
+                const outputArray = new Uint8Array(rawData.length);
+                for (let i = 0; i < rawData.length; ++i) {
+                    outputArray[i] = rawData.charCodeAt(i);
+                }
+                return outputArray;
+            }
+
+            async function setupNotifications() {
+                if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+                    alert("Tu navegador no soporta notificaciones push.");
+                    document.getElementById('btn-notifications').disabled = true;
+                    return;
+                }
+
+                try {
+                    const registration = await navigator.serviceWorker.register('sw.js');
+                    console.log('Service Worker registrado con éxito:', registration);
+                    
+                    const permission = await Notification.requestPermission();
+                    if (permission === 'granted') {
+                        console.log('Permiso de notificación concedido.');
+                        document.getElementById('btn-notifications').textContent = '✅ Notificaciones Activadas';
+                        document.getElementById('btn-notifications').disabled = true;
+                    } else {
+                        console.warn('Permiso de notificación denegado.');
+                    }
+                } catch (error) {
+                    console.error('Fallo al registrar el Service Worker:', error);
+                }
+            }
+
+            async function subscribeUser() {
+                try {
+                    const registration = await navigator.serviceWorker.ready;
+                    const subscription = await registration.pushManager.subscribe({
+                        userVisibleOnly: true,
+                        applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY)
+                    });
+                    
+                    console.log('Suscripción exitosa:', JSON.stringify(subscription));
+
+                    // --- PASO CLAVE ---
+                    // Aquí es donde enviarías el objeto `subscription` a tu servidor
+                    // para guardarlo y poder enviar notificaciones más tarde.
+                    // Ejemplo:
+                    // await fetch('/api/save-subscription', {
+                    //   method: 'POST',
+                    //   body: JSON.stringify(subscription),
+                    //   headers: { 'Content-Type': 'application/json' }
+                    // });
+                    alert('Suscripción realizada con éxito. Revisa la consola para ver los detalles.');
+
+                } catch (error) {
+                    console.error('Fallo al suscribir al usuario:', error);
+                    alert('Hubo un error al intentar activar las notificaciones.');
+                }
+            }
+
+            document.getElementById('btn-notifications').addEventListener('click', async () => {
+                const permission = Notification.permission;
+                if (permission === 'granted') {
+                    await subscribeUser();
+                } else if (permission === 'denied') {
+                    alert('Has bloqueado las notificaciones. Debes activarlas en la configuración del navegador.');
+                } else {
+                    const newPermission = await Notification.requestPermission();
+                    if (newPermission === 'granted') {
+                        await subscribeUser();
+                    }
+                }
+            });
+
+            // Iniciar la configuración de notificaciones al cargar la página
+            setupNotifications();
+            // --- FIN: LÓGICA DE NOTIFICACIONES PUSH ---
         });
     </script>
 </body>
