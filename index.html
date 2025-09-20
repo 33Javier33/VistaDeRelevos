@@ -8,7 +8,7 @@
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#3498db">
     <style>
-        :root{--bg-color:#f4f7f9;--surface-color:#fff;--text-color:#34495e;--text-secondary-color:#7f8c8d;--border-color:#ecf0f1;--shadow-color:rgba(0,0,0,.1);--primary-color:#3498db;--primary-hover-color:#2980b9;--disabled-color:#bdc3c7;--timer-color:#2c3e50;--success-color:#2ecc71;--danger-color:#e74c3c;--danger-hover-color:#c0392b;--notification-btn-bg:#1abc9c;--notification-btn-hover:#16a085;}
+        :root{--bg-color:#f4f7f9;--surface-color:#fff;--text-color:#34495e;--text-secondary-color:#7f8c8d;--border-color:#ecf0f1;--shadow-color:rgba(0,0,0,.1);--primary-color:#3498db;--primary-hover-color:#2980b9;--disabled-color:#bdc3c7;--timer-color:#2c3e50;--success-color:#2ecc71;--danger-color:#e74c3c;--danger-hover-color:#c0392b;}
         body{font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;background-color:var(--bg-color);margin:0;padding:20px;color:var(--text-color);font-size:16px}
         .container{max-width:1200px;margin:0 auto;background-color:var(--surface-color);padding:20px;border-radius:8px;box-shadow:0 4px 6px var(--shadow-color)}
         .header{text-align:center;margin-bottom:25px;border-bottom:1px solid var(--border-color);padding-bottom:20px}
@@ -61,20 +61,6 @@
             color: var(--text-secondary-color);
             border-top: 1px solid var(--border-color);
         }
-        #btn-notifications {
-            background-color: var(--notification-btn-bg);
-            color: white;
-            border: none;
-            padding: 10px 15px;
-            border-radius: 5px;
-            cursor: pointer;
-            font-weight: bold;
-            margin-top: 10px;
-            transition: background-color 0.3s;
-        }
-        #btn-notifications:hover {
-            background-color: var(--notification-btn-hover);
-        }
     </style>
 </head>
 <body>
@@ -98,7 +84,6 @@
         </div>
         
         <footer>
-             <button id="btn-notifications">🔔 Activar Notificaciones</button>
              <p style="margin-top: 15px;">CarlosPN Interactive®</p>
         </footer>
     </div>
@@ -107,7 +92,7 @@
         document.addEventListener('DOMContentLoaded', () => {
             const URL_DEL_SCRIPT_DE_HORARIOS = 'https://script.google.com/macros/s/AKfycbw1kBHYt37_X5K7UdBZlJNTgNT2B2P0t4F6uVrCKK_hDgZ7j09cwSzNx5l9CvHwFCTDQg/exec';
             
-            // LÓGICA DE HORARIOS (SIN CAMBIOS)
+            // LÓGICA DE HORARIOS
             let datosCompletosDelHorario = null;
             let indiceActual = 0;
             const COLUMNAS_VISIBLES = 3;
@@ -363,88 +348,18 @@
                 if (indiceActual > 0) { indiceActual = Math.max(0, indiceActual - COLUMNAS_VISIBLES); renderCurrentView(); }
             });
 
-            // --- INICIO: LÓGICA DE NOTIFICACIONES PUSH ---
-            const VAPID_PUBLIC_KEY = 'BCur0YnUTn7l2Nq_iUF3JwyaGSHiv4gexbkv84svB42Y4N1gqKAwKNEUj5JKSk12SmEv8FMR46ISJmP8y4bCzuc';
-
-            function urlBase64ToUint8Array(base64String) {
-                const padding = '='.repeat((4 - base64String.length % 4) % 4);
-                const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
-                const rawData = window.atob(base64);
-                const outputArray = new Uint8Array(rawData.length);
-                for (let i = 0; i < rawData.length; ++i) {
-                    outputArray[i] = rawData.charCodeAt(i);
-                }
-                return outputArray;
+            // --- Registro del Service Worker para PWA ---
+            if ('serviceWorker' in navigator) {
+                window.addEventListener('load', () => {
+                    navigator.serviceWorker.register('sw.js')
+                        .then(registration => {
+                            console.log('Service Worker registrado con éxito:', registration);
+                        })
+                        .catch(error => {
+                            console.error('Fallo al registrar el Service Worker:', error);
+                        });
+                });
             }
-
-            async function setupNotifications() {
-                if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
-                    alert("Tu navegador no soporta notificaciones push.");
-                    document.getElementById('btn-notifications').disabled = true;
-                    return;
-                }
-
-                try {
-                    const registration = await navigator.serviceWorker.register('sw.js');
-                    console.log('Service Worker registrado con éxito:', registration);
-                    
-                    const permission = await Notification.requestPermission();
-                    if (permission === 'granted') {
-                        console.log('Permiso de notificación concedido.');
-                        document.getElementById('btn-notifications').textContent = '✅ Notificaciones Activadas';
-                        document.getElementById('btn-notifications').disabled = true;
-                    } else {
-                        console.warn('Permiso de notificación denegado.');
-                    }
-                } catch (error) {
-                    console.error('Fallo al registrar el Service Worker:', error);
-                }
-            }
-
-            async function subscribeUser() {
-                try {
-                    const registration = await navigator.serviceWorker.ready;
-                    const subscription = await registration.pushManager.subscribe({
-                        userVisibleOnly: true,
-                        applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY)
-                    });
-                    
-                    console.log('Suscripción exitosa:', JSON.stringify(subscription));
-
-                    // --- PASO CLAVE ---
-                    // Aquí es donde enviarías el objeto `subscription` a tu servidor
-                    // para guardarlo y poder enviar notificaciones más tarde.
-                    // Ejemplo:
-                    // await fetch('/api/save-subscription', {
-                    //   method: 'POST',
-                    //   body: JSON.stringify(subscription),
-                    //   headers: { 'Content-Type': 'application/json' }
-                    // });
-                    alert('Suscripción realizada con éxito. Revisa la consola para ver los detalles.');
-
-                } catch (error) {
-                    console.error('Fallo al suscribir al usuario:', error);
-                    alert('Hubo un error al intentar activar las notificaciones.');
-                }
-            }
-
-            document.getElementById('btn-notifications').addEventListener('click', async () => {
-                const permission = Notification.permission;
-                if (permission === 'granted') {
-                    await subscribeUser();
-                } else if (permission === 'denied') {
-                    alert('Has bloqueado las notificaciones. Debes activarlas en la configuración del navegador.');
-                } else {
-                    const newPermission = await Notification.requestPermission();
-                    if (newPermission === 'granted') {
-                        await subscribeUser();
-                    }
-                }
-            });
-
-            // Iniciar la configuración de notificaciones al cargar la página
-            setupNotifications();
-            // --- FIN: LÓGICA DE NOTIFICACIONES PUSH ---
         });
     </script>
 </body>
